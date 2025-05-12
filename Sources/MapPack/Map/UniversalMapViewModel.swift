@@ -50,7 +50,7 @@ public class UniversalMapViewModel: ObservableObject {
     @Published public var polylines: [UniversalMapPolyline] = []
     @Published public var edgeInsets = UniversalMapEdgeInsets()
     @Published public var addressInfo: AddressInfo?
-    
+    public private(set) var defaultZoomLevel: Double = 15
     var pinViewBottomOffset: CGFloat {
         let bottomOffset = self.edgeInsets.insets.bottom
         
@@ -203,6 +203,14 @@ public class UniversalMapViewModel: ObservableObject {
     
     public func setInteractionDelegate(_ delegate: any UniversalMapViewModelDelegate) {
         self.delegate = delegate
+    }
+    
+    public func focusToCurrentLocation() {
+        guard let location = 
+        self.mapProviderInstance.focusMap(
+            on: <#T##CLLocationCoordinate2D#>,
+            zoom: defaultZoomLevel
+        )
     }
     
     // MARK: - Private Methods

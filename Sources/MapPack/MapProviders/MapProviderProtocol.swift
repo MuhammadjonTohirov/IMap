@@ -16,6 +16,8 @@ public protocol MapProviderProtocol {
     /// Initialize the map provider
     init()
     
+    var currentLocation: CLLocation? { get }
+    
     /// Update the camera position
     func updateCamera(to camera: UniversalMapCamera)
     

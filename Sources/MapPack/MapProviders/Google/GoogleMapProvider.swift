@@ -14,7 +14,11 @@ import GoogleMaps
 public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     private var viewModel: GoogleMapsViewWrapperModel = .init()
     private var mapOptions = GMSMapViewOptions()
-
+    
+    public var currentLocation: CLLocation? {
+        self.viewModel.mapView?.myLocation
+    }
+    
     required public override init() {
         super.init()
     }

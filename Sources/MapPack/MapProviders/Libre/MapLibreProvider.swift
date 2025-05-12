@@ -20,6 +20,10 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     private var showsUserLocation: Bool = true
     private var userTrackingMode: MLNUserTrackingMode?
     
+    public var currentLocation: CLLocation? {
+        self.viewModel.mapView?.userLocation?.location
+    }
+    
     private var markers: [String: UniversalMapMarker] = [:]
     private var polylines: [String: UniversalMapPolyline] = [:]
     
