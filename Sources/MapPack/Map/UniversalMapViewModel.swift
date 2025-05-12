@@ -205,10 +205,12 @@ public class UniversalMapViewModel: ObservableObject {
         self.delegate = delegate
     }
     
+    @MainActor
     public func focusToCurrentLocation() {
-        guard let location = 
+        guard let location = self.mapProviderInstance.currentLocation else { return }
+        
         self.mapProviderInstance.focusMap(
-            on: <#T##CLLocationCoordinate2D#>,
+            on: location.coordinate,
             zoom: defaultZoomLevel
         )
     }
