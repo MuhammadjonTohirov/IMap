@@ -68,7 +68,6 @@ public extension Array {
 }
 
 extension UIImage {
-    
     @MainActor
     static func systemImageFilled(symbolName: String, color: UIColor, size: CGSize = CGSize(width: 30, height: 30)) -> UIImage? {
         let config = UIImage.SymbolConfiguration(pointSize: size.width, weight: .regular)

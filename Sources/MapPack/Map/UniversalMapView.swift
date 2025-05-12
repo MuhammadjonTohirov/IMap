@@ -28,8 +28,11 @@ public struct UniversalMapView: View {
         ZStack {
             // Display the map view from the current provider
             viewModel.makeMapView()
-                .ignoresSafeArea()
-            
+                .ignoresSafeArea(edges: .all)
+                .overlay {
+                    PinView(vm: viewModel.pinModel)
+                        .padding(.bottom, viewModel.pinViewBottomOffset)
+                }
             // You can overlay additional controls or UI elements here
         }
     }

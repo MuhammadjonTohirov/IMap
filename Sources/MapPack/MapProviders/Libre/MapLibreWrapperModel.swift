@@ -29,14 +29,15 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     @Published var isMapLoaded: Bool = false
     // Map markers
     @Published var markers: [MapMarker] = []
-    
+
+    public private(set) weak var interactionDelegate: MapInteractionDelegate?
 
     // Temporary source and layer IDs
     let tempPolylineSourceID = "temp-polyline-source"
     let tempPolylineLayerID = "temp-polyline-layer"
     
     func set(inputProvider: any UniversalMapInputProvider) {
-        guard let inputProvider = inputProvider as? LibreMapsKeyProvider else { return }
+        guard let _ = inputProvider as? LibreMapsKeyProvider else { return }
         
     }
     
@@ -44,9 +45,9 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     func centerMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
         guard let mapView = mapView else { return }
-        
+        let acrossDistance = metersAcross(zoomLevel: zoom ?? 25, latitude: coordinate.latitude, screenWidthPoints: UIApplication.shared.screenFrame.width)
         let camera = MLNMapCamera(lookingAtCenter: coordinate,
-                                 acrossDistance: 1000,
+                                 acrossDistance: acrossDistance,
                                  pitch: 0,
                                  heading: 0)
 
@@ -68,29 +69,8 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         mapView.setCamera(camera, animated: true)
     }
     
-    // MARK: - MLNMapViewDelegate Methods
-    
-    public func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
-        print("Map style finished loading")
-        self.isMapLoaded = true
-        
-        // Add saved polylines to the map when style is loaded
-        for polyline in savedPolylines {
-            addPolylineToMap(polyline)
-        }
-    }
-    
-    public func mapView(_ mapView: MLNMapView, didUpdate userLocation: MLNUserLocation?) {
-        if let location = userLocation?.location {
-            self.userLocation = location
-        }
-    }
-    
-    public func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
-        Task { @MainActor in
-            self.mapCenter = mapView.centerCoordinate
-            self.zoomLevel = mapView.zoomLevel
-        }
+    func set(mapDelegate: MapInteractionDelegate?) {
+        self.interactionDelegate = mapDelegate
     }
 }
 extension MapLibreWrapperModel {
@@ -164,6 +144,19 @@ extension MLNPointAnnotation {
     }
 }
 
-extension MapLibreWrapperModel: MLNMapViewDelegate {
-    
+extension MapLibreWrapperModel {
+    func metersAcross(zoomLevel: Double, latitude: CLLocationDegrees, screenWidthPoints: CGFloat, scale: CGFloat = UIScreen.main.scale) -> Double {
+        let tileSize: Double = 256.0 // pixels
+        let earthCircumference: Double = 40_075_016.686  // in meters
+        let zoomScale = pow(2.0, zoomLevel)
+
+        // Pixel width of full world map at this zoom level
+        let totalPixels = zoomScale * tileSize
+
+        // Real-world meters per pixel at this latitude
+        let metersPerPixel = (cos(latitude * Double.pi / 180) * earthCircumference) / totalPixels
+
+        // Total width of map visible on screen in meters
+        return metersPerPixel * Double(screenWidthPoints * scale)
+    }
 }

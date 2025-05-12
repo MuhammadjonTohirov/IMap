@@ -23,6 +23,11 @@ public class UniversalMapViewModel: ObservableObject {
     @Published public var polylines: [UniversalMapPolyline] = []
     @Published public var edgeInsets = UniversalMapEdgeInsets()
     
+    var pinViewBottomOffset: CGFloat {
+        self.edgeInsets.insets.bottom
+    }
+    
+    public private(set) var pinModel: PinViewModel = .init()
     // Private properties
     public private(set) var mapProviderInstance: MapProviderProtocol
     private var markersById: [String: UniversalMapMarker] = [:]
@@ -162,6 +167,10 @@ public class UniversalMapViewModel: ObservableObject {
     /// Get the current map view
     public func makeMapView() -> AnyView {
         return mapProviderInstance.makeMapView()
+    }
+    
+    public func setInteractionDelegate(_ delegate: any MapInteractionDelegate) {
+        self.mapProviderInstance.setInteractionDelegate(delegate)
     }
     
     // MARK: - Private Methods
