@@ -10,7 +10,7 @@ import SwiftUI
 
 extension UIApplication {
     
-    public var safeArea: UIEdgeInsets {
+    var safeArea: UIEdgeInsets {
         guard let activeView = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first else {
             return .zero
         }
@@ -18,7 +18,7 @@ extension UIApplication {
         return activeView.safeAreaInsets
     }
     
-    public var screenFrame: CGRect {
+    var screenFrame: CGRect {
         guard let activeView = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first else {
             return .zero
         }
@@ -26,7 +26,7 @@ extension UIApplication {
         return activeView.frame
     }
     
-    public var safeAreaFrame: CGRect {
+    var safeAreaFrame: CGRect {
         guard let activeView = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first else {
             return .zero
         }
@@ -34,7 +34,7 @@ extension UIApplication {
         return activeView.safeAreaLayoutGuide.layoutFrame
     }
     
-    public var statusBarHeight: CGRect {
+    var statusBarHeight: CGRect {
         guard let activeView = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first else {
             return .zero
         }
@@ -42,11 +42,11 @@ extension UIApplication {
         return activeView.windowScene?.statusBarManager?.statusBarFrame ?? .zero
     }
     
-    public var hasDynamicIsland: Bool {
+    var hasDynamicIsland: Bool {
         safeArea.top > 51
     }
     
-    public func dismissKeyboard() {
+    func dismissKeyboard() {
         guard let activeView = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first else {
             return
         }
