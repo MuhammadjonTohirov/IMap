@@ -45,7 +45,8 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     func centerMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
         guard let mapView = mapView else { return }
-        let acrossDistance = metersAcross(zoomLevel: zoom ?? 25, latitude: coordinate.latitude, screenWidthPoints: UIApplication.shared.screenFrame.width)
+        let _zoom = (zoom ?? self.zoomLevel) / 1.036
+        let acrossDistance = metersAcrossAtZoomLevel(_zoom, latitude: coordinate.latitude, screenWidthPoints: UIApplication.shared.screenFrame.width)
         let camera = MLNMapCamera(lookingAtCenter: coordinate,
                                  acrossDistance: acrossDistance,
                                  pitch: 0,
@@ -157,6 +158,24 @@ extension MapLibreWrapperModel {
         let metersPerPixel = (cos(latitude * Double.pi / 180) * earthCircumference) / totalPixels
 
         // Total width of map visible on screen in meters
-        return metersPerPixel * Double(screenWidthPoints * scale)
+        return metersPerPixel * Double(screenWidthPoints * scale) + 3500
+    }
+    
+    func metersAcrossAtZoomLevel(_ zoomLevel: Double, latitude: CLLocationDegrees, screenWidthPoints: CGFloat, scale: CGFloat = UIScreen.main.scale) -> Double {
+        let earthCircumference: Double = 40075016.686  // meters
+        let tileSize: Double = 256.0 // pixels (standard)
+        let latitudeRadians = latitude * Double.pi / 180.0
+
+        // Total pixels at this zoom level
+        let mapPixelSize = tileSize * pow(2.0, zoomLevel)
+
+        // Meters per pixel at the given latitude
+        let metersPerPixel = (earthCircumference * cos(latitudeRadians)) / mapPixelSize
+
+        // Convert screen width in points to pixels
+        let screenWidthPixels = Double(screenWidthPoints) * Double(scale)
+
+        // Total across distance in meters
+        return metersPerPixel * screenWidthPixels
     }
 }

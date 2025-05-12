@@ -41,7 +41,7 @@ public struct UniversalMapView: View {
     
     /// Change the map provider
     public func mapProvider(_ provider: MapProvider) -> Self {
-        viewModel.setMapProvider(provider)
+        viewModel.setMapProvider(provider, input: nil)
         return self
     }
     

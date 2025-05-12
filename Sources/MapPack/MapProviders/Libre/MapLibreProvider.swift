@@ -19,7 +19,6 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     private var mapInsets: MapEdgeInsets?
     private var showsUserLocation: Bool = true
     private var userTrackingMode: MLNUserTrackingMode?
-    private var interactionDelegate: MapInteractionDelegate?
     
     private var markers: [String: UniversalMapMarker] = [:]
     private var polylines: [String: UniversalMapPolyline] = [:]
@@ -94,8 +93,8 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     }
     
     public func setInteractionDelegate(_ delegate: MapInteractionDelegate?) {
-        self.interactionDelegate = delegate
-        // Set up delegation connection with viewModel
+        Logging.l("Set interaction delegate to \(String(describing: delegate))")
+        self.viewModel.set(mapDelegate: delegate)
     }
     
     public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?) {

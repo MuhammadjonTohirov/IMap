@@ -57,7 +57,7 @@ public class UniversalMapViewModel: ObservableObject {
     // MARK: - Public Methods
     
     /// Change the map provider type
-    public func setMapProvider(_ provider: MapProvider) {
+    public func setMapProvider(_ provider: MapProvider, input: (any UniversalMapInputProvider)?) {
         // Only change if different
         guard provider != mapProvider else { return }
         
@@ -72,6 +72,8 @@ public class UniversalMapViewModel: ObservableObject {
         
         // Reapply current configuration to the new provider
         updateMapProviderConfiguration()
+        
+        if let input { self.set(input: input) }
     }
     
     /// Update the camera position
