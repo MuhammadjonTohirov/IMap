@@ -26,15 +26,28 @@ public struct UniversalMapView: View {
     
     public var body: some View {
         ZStack {
-            // Display the map view from the current provider
             viewModel.makeMapView()
-                .ignoresSafeArea(edges: .all)
+                .ignoreSafeArea(if: self.viewModel.mapProvider == .google)
                 .overlay {
-                    PinView(vm: viewModel.pinModel)
-                        .padding(.bottom, viewModel.pinViewBottomOffset)
+                    ZStack {
+                        addressView
+                            .padding(.bottom, viewModel.pinViewBottomOffset + 200)
+                        PinView(vm: viewModel.pinModel)
+                            .padding(.bottom, viewModel.pinViewBottomOffset)
+                    }
                 }
-            // You can overlay additional controls or UI elements here
+                .ignoreSafeArea(if: self.viewModel.mapProvider == .mapLibre)
         }
+    }
+    
+    private var addressView: some View {
+        Text(viewModel.addressInfo?.name ?? "Loading...")
+            .foregroundStyle(.white)
+            .padding(4)
+            .font(.system(size: 14, weight: .medium))
+            .background {
+                Capsule()
+            }
     }
     
     // MARK: - Public API for modifying the map
@@ -79,5 +92,15 @@ public struct UniversalMapView: View {
     public func focus(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil) -> Self {
         viewModel.focusMap(on: coordinate, zoom: zoom)
         return self
+    }
+}
+
+private extension View {
+    func ignoreSafeArea(edge: UIEdgeInsets = .zero, if condition: Bool) -> some View {
+        if condition {
+            return AnyView(self.ignoresSafeArea())
+        }
+        
+        return AnyView(self)
     }
 }

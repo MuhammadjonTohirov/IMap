@@ -11,7 +11,6 @@ import MapLibre
 // MARK: - MLNMapViewDelegate Methods
 
 extension MapLibreWrapperModel: MLNMapViewDelegate {
-    
     public func mapView(_ mapView: MLNMapView, regionWillChangeAnimated animated: Bool) {
         Task { @MainActor in
             self.interactionDelegate?.mapDidStartMoving()
@@ -49,5 +48,9 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
                 }
             }
         }
+    }
+    
+    public func mapViewDidBecomeIdle(_ mapView: MLNMapView) {
+
     }
 }

@@ -29,7 +29,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     @Published var isMapLoaded: Bool = false
     // Map markers
     @Published var markers: [MapMarker] = []
-
+        
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
 
     // Temporary source and layer IDs
@@ -46,20 +46,32 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     func centerMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
         guard let mapView = mapView else { return }
         let _zoom = (zoom ?? self.zoomLevel) / 1.036
-        let acrossDistance = metersAcrossAtZoomLevel(_zoom, latitude: coordinate.latitude, screenWidthPoints: UIApplication.shared.screenFrame.width)
-        let camera = MLNMapCamera(lookingAtCenter: coordinate,
-                                 acrossDistance: acrossDistance,
-                                 pitch: 0,
-                                 heading: 0)
+        let acrossDistance = metersAcrossAtZoomLevel(
+            _zoom,
+            latitude: coordinate.latitude,
+            screenWidthPoints: UIApplication.shared.screenFrame.width
+        )
+        
+        let camera = MLNMapCamera(
+            lookingAtCenter: coordinate,
+            acrossDistance: acrossDistance,
+            pitch: 0,
+            heading: 0
+        )
 
         mapView.setCamera(camera, animated: animated)
     }
     
     func flyTo(coordinate: CLLocationCoordinate2D, zoom: Double? = nil) {
         guard let mapView = mapView else { return }
-        
+        let _zoom = (zoom ?? self.zoomLevel) / 1.036
+        let acrossDistance = metersAcrossAtZoomLevel(
+            _zoom,
+            latitude: coordinate.latitude,
+            screenWidthPoints: UIApplication.shared.screenFrame.width
+        )
         let camera = MLNMapCamera(lookingAtCenter: coordinate,
-                                 acrossDistance: 1000,
+                                 acrossDistance: acrossDistance,
                                  pitch: 0,
                                  heading: 0)
         
@@ -73,7 +85,29 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     func set(mapDelegate: MapInteractionDelegate?) {
         self.interactionDelegate = mapDelegate
     }
+    
+    func setupGestureLocker() {
+        mapView?.gestureRecognizers?.forEach { gesture in
+            if gesture is UIPinchGestureRecognizer || gesture is UIRotationGestureRecognizer {
+                gesture.addTarget(self, action: #selector(lockPanDuringGesture(_:)))
+            }
+        }
+    }
+    
+    @objc func lockPanDuringGesture(_ gesture: UIGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            mapView?.isScrollEnabled = false
+            mapView?.allowsScrolling = false
+        case .ended, .cancelled, .failed:
+            mapView?.isScrollEnabled = true
+            mapView?.allowsScrolling = true
+        default:
+            break
+        }
+    }
 }
+
 extension MapLibreWrapperModel {
     // MARK: - Marker Management
     

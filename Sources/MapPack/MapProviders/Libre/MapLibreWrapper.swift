@@ -49,9 +49,14 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         view.showsUserHeadingIndicator = true
         view.delegate = viewModel
         view.prefetchesTiles = true
+        view.isMultipleTouchEnabled = false
         view.tileCacheEnabled = true
+        view.isPitchEnabled = false
+        view.isHapticFeedbackEnabled = false
         viewModel.mapView = view
-        
+        viewModel.setupGestureLocker()
+        view.anchorRotateOrZoomGesturesToCenterCoordinate = true
+
         return view
     }
     

@@ -11,6 +11,33 @@ import SwiftUI
 import CoreLocation
 import Combine
 
+public protocol UniversalMapViewModelDelegate: AnyObject {
+    func mapDidStartDragging(map: MapProviderProtocol)
+    func mapDidStartMoving(map: MapProviderProtocol)
+    func mapDidEndDragging(map: MapProviderProtocol, at location: CLLocation)
+    func mapDidTapMarker(map: MapProviderProtocol, id: String) -> Bool
+    func mapDidTap(map: MapProviderProtocol, at coordinate: CLLocationCoordinate2D)
+}
+
+// Default implementation
+public extension UniversalMapViewModelDelegate {
+    func mapDidStartDragging(map: MapProviderProtocol) {}
+    func mapDidStartMoving(map: MapProviderProtocol) {}
+    func mapDidEndDragging(map: MapProviderProtocol, at location: CLLocation) {}
+    func mapDidTapMarker(map: MapProviderProtocol, id: String) -> Bool {false}
+    func mapDidTap(map: MapProviderProtocol, at coordinate: CLLocationCoordinate2D) {}
+}
+
+public struct AddressInfo {
+    public var name: String?
+    public var location: CLLocationCoordinate2D?
+    
+    public init(name: String? = nil, location: CLLocationCoordinate2D? = nil) {
+        self.name = name
+        self.location = location
+    }
+}
+
 /// View model for the Universal Map
 public class UniversalMapViewModel: ObservableObject {
     // Published properties
@@ -22,11 +49,14 @@ public class UniversalMapViewModel: ObservableObject {
     @Published public var markers: [UniversalMapMarker] = []
     @Published public var polylines: [UniversalMapPolyline] = []
     @Published public var edgeInsets = UniversalMapEdgeInsets()
+    @Published public var addressInfo: AddressInfo?
     
     var pinViewBottomOffset: CGFloat {
-        self.edgeInsets.insets.bottom
+        let bottomOffset = self.edgeInsets.insets.bottom
+        
+        return bottomOffset
     }
-    
+    public private(set) weak var delegate: UniversalMapViewModelDelegate?
     public private(set) var pinModel: PinViewModel = .init()
     // Private properties
     public private(set) var mapProviderInstance: MapProviderProtocol
@@ -171,8 +201,8 @@ public class UniversalMapViewModel: ObservableObject {
         return mapProviderInstance.makeMapView()
     }
     
-    public func setInteractionDelegate(_ delegate: any MapInteractionDelegate) {
-        self.mapProviderInstance.setInteractionDelegate(delegate)
+    public func setInteractionDelegate(_ delegate: any UniversalMapViewModelDelegate) {
+        self.delegate = delegate
     }
     
     // MARK: - Private Methods
@@ -204,23 +234,22 @@ public class UniversalMapViewModel: ObservableObject {
 // MARK: - MapInteractionDelegate Implementation
 extension UniversalMapViewModel: MapInteractionDelegate {
     public func mapDidStartDragging() {
-        // Implement any view model logic when map dragging starts
+        self.delegate?.mapDidStartMoving(map: self.mapProviderInstance)
     }
     
     public func mapDidStartMoving() {
-        // Implement any view model logic when map movement starts
+        self.delegate?.mapDidStartMoving(map: self.mapProviderInstance)
     }
     
     public func mapDidEndDragging(at location: CLLocation) {
-        // Implement any view model logic when map dragging ends
+        self.delegate?.mapDidEndDragging(map: self.mapProviderInstance, at: location)
     }
     
     public func mapDidTapMarker(id: String) -> Bool {
-        // Return true if you've handled the tap, false to show the default info window
-        return false
+        self.delegate?.mapDidTapMarker(map: self.mapProviderInstance, id: id) ?? false
     }
     
     public func mapDidTap(at coordinate: CLLocationCoordinate2D) {
-        // Handle map tap events
+        self.delegate?.mapDidTap(map: self.mapProviderInstance, at: coordinate)
     }
 }
