@@ -1,0 +1,125 @@
+//
+//  LibreMapProvider.swift
+//  UniversalMap
+//
+//  Created by Muhammadjon Tohirov on 08/05/25.
+//
+
+// UniversalMap/Providers/MapLibre/MapLibreProvider.swift
+import Foundation
+import SwiftUI
+import MapLibre
+import CoreLocation
+
+/// Implementation of the map provider protocol for MapLibre
+public class MapLibreProvider: NSObject, MapProviderProtocol {
+    private var viewModel = MapLibreWrapperModel()
+    private var mapStyle: UniversalMapStyle = .light
+    private var mapCamera: MapCamera?
+    private var mapInsets: MapEdgeInsets?
+    private var showsUserLocation: Bool = true
+    private var userTrackingMode: MLNUserTrackingMode?
+    private var interactionDelegate: MapInteractionDelegate?
+    
+    private var markers: [String: UniversalMapMarker] = [:]
+    private var polylines: [String: UniversalMapPolyline] = [:]
+    
+    required public override init() {
+        super.init()
+    }
+    
+    public func updateCamera(to camera: UniversalMapCamera) {
+        self.mapCamera = camera.toMLNCamera()
+    }
+    
+    public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
+        self.mapInsets = insets.toMapLibreEdgeInsets()
+    }
+    
+    public func addMarker(_ marker: UniversalMapMarker) {
+        markers[marker.id] = marker
+        viewModel.addMarker(marker.toMapLibreMarker())
+    }
+    
+    public func removeMarker(withId id: String) {
+        if markers[id] != nil {
+            viewModel.removeMarker(withId: id)
+            markers.removeValue(forKey: id)
+        }
+    }
+    
+    public func clearAllMarkers() {
+        viewModel.clearAllMarkers()
+        markers.removeAll()
+    }
+    
+    public func addPolyline(_ polyline: UniversalMapPolyline) {
+        polylines[polyline.id] = polyline
+
+        viewModel.addPolyline(
+            coordinates: polyline.coordinates,
+            title: polyline.title,
+            color: polyline.color,
+            width: polyline.width
+        )
+    }
+    
+    public func removePolyline(withId id: String) {
+        if polylines[id] != nil {
+            // Find the MapLibre polyline with matching ID
+            if let index = viewModel.savedPolylines.firstIndex(where: { $0.id == id }) {
+                // Remove it
+                viewModel.savedPolylines.remove(at: index)
+                polylines.removeValue(forKey: id)
+            }
+        }
+    }
+    
+    public func clearAllPolylines() {
+        viewModel.clearAllPolylines()
+        polylines.removeAll()
+    }
+    
+    public func setMapStyle(_ style: UniversalMapStyle) {
+        self.mapStyle = style
+        self.viewModel.mapView?.styleURL = URL(string: style.mapLibreStyleURL)
+    }
+    
+    public func showUserLocation(_ show: Bool) {
+        self.showsUserLocation = show
+    }
+    
+    public func setUserTrackingMode(_ tracking: Bool) {
+        self.userTrackingMode = tracking ? .followWithHeading : nil
+    }
+    
+    public func setInteractionDelegate(_ delegate: MapInteractionDelegate?) {
+        self.interactionDelegate = delegate
+        // Set up delegation connection with viewModel
+    }
+    
+    public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?) {
+        viewModel.centerMap(on: coordinate, zoom: zoom, animated: true)
+    }
+    
+    public func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool) {
+        viewModel.focusOnPolyline(id: id)
+    }
+    
+    public func setInput(input: any UniversalMapInputProvider) {
+        self.viewModel.set(inputProvider: input)
+    }
+    
+    public func makeMapView() -> AnyView {
+        return AnyView(
+            MLNMapViewWrapper(
+                viewModel: viewModel,
+                camera: mapCamera,
+                styleUrl: mapStyle.mapLibreStyleURL,
+                inset: mapInsets,
+                trackingMode: userTrackingMode,
+                showsUserLocation: showsUserLocation
+            )
+        )
+    }
+}
