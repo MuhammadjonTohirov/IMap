@@ -227,17 +227,20 @@ public class UniversalMapViewModel: ObservableObject {
         self.hasAddressView = hasAddressView
     }
     
-    public func set(routeData: RouteData?, from: CLLocationCoordinate2D? = nil) {
-        self.polylines = polylines(from: routeData, source: from)
+    @MainActor
+    public func set(polylines: [UniversalMapPolyline]) {
+        self.polylines = polylines
         self.polylines.forEach { line in
             self.mapProviderInstance.addPolyline(line)
         }
     }
     
+    @MainActor
     public func clearRouteData() {
         polylines.forEach {
             self.mapProviderInstance.removePolyline(withId: $0.id)
         }
+        polylines.removeAll()
     }
     
     // MARK: - Private Methods
@@ -286,28 +289,5 @@ extension UniversalMapViewModel: MapInteractionDelegate {
     
     public func mapDidTap(at coordinate: CLLocationCoordinate2D) {
         self.delegate?.mapDidTap(map: self.mapProviderInstance, at: coordinate)
-    }
-}
-
-extension UniversalMapViewModel {
-    func polylines(from routeData: RouteData?, source from: CLLocationCoordinate2D? = nil) -> [UniversalMapPolyline] {
-        
-        var polylines: [UniversalMapPolyline] = []
-        
-        if let from, let first = routeData?.routings.first {
-            polylines.append(
-                .init(
-                    id: "walkline",
-                    coordinates: [from, first.coordinate]
-                )
-            )
-        }
-        
-        polylines.append(UniversalMapPolyline(
-            id: "carline",
-            coordinates: routeData?.routings.compactMap({.init(latitude: $0.lat, longitude: $0.lng)}) ?? []
-        ))
-        
-        return polylines
     }
 }
