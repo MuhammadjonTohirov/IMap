@@ -50,6 +50,10 @@ public class UniversalMapViewModel: ObservableObject {
     @Published public var polylines: [UniversalMapPolyline] = []
     @Published public var edgeInsets = UniversalMapEdgeInsets()
     @Published public var addressInfo: AddressInfo?
+    
+    public private(set) var hasAddressPicker: Bool = true
+    public private(set) var hasAddressView: Bool = true
+    
     public private(set) var defaultZoomLevel: Double = 15
     var pinViewBottomOffset: CGFloat {
         let bottomOffset = self.edgeInsets.insets.bottom
@@ -213,6 +217,14 @@ public class UniversalMapViewModel: ObservableObject {
             on: location.coordinate,
             zoom: defaultZoomLevel
         )
+    }
+    
+    public func set(hasAddressPicker: Bool) {
+        self.hasAddressPicker = hasAddressPicker
+    }
+    
+    public func set(hasAddressView: Bool) {
+        self.hasAddressView = hasAddressView
     }
     
     // MARK: - Private Methods
