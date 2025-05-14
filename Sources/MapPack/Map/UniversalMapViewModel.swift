@@ -46,7 +46,6 @@ public class UniversalMapViewModel: ObservableObject {
     @Published public var mapStyle: UniversalMapStyle = .light
     @Published public var showUserLocation: Bool = true
     @Published public var userTrackingMode: Bool = false
-    @Published public var markers: [UniversalMapMarker] = []
     @Published public var polylines: [UniversalMapPolyline] = []
     @Published public var edgeInsets = UniversalMapEdgeInsets()
     @Published public var addressInfo: AddressInfo?
@@ -64,7 +63,9 @@ public class UniversalMapViewModel: ObservableObject {
     public private(set) var pinModel: PinViewModel = .init()
     // Private properties
     public private(set) var mapProviderInstance: MapProviderProtocol
-    private var markersById: [String: UniversalMapMarker] = [:]
+    private var markersById: [String: any UniversalMapMarkerProtocol] {
+        mapProviderInstance.markers
+    }
     private var polylinesById: [String: UniversalMapPolyline] = [:]
     private var cancellables = Set<AnyCancellable>()
     
@@ -142,27 +143,27 @@ public class UniversalMapViewModel: ObservableObject {
     
     /// Add a marker to the map
     @discardableResult
-    public func addMarker(_ marker: UniversalMapMarker) -> String {
-        markersById[marker.id] = marker
-        markers.append(marker)
+    public func addMarker(_ marker: any UniversalMapMarkerProtocol) -> String {
         mapProviderInstance.addMarker(marker)
         return marker.id
     }
     
+    public func marker(byId id: String) -> (any UniversalMapMarkerProtocol)? {
+        return markersById[id]
+    }
+    
+    public func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
+        mapProviderInstance.updateMarker(marker)
+    }
+    
     /// Remove a marker from the map
     public func removeMarker(withId id: String) {
-        if let index = markers.firstIndex(where: { $0.id == id }) {
-            markers.remove(at: index)
-        }
-        markersById.removeValue(forKey: id)
         mapProviderInstance.removeMarker(withId: id)
     }
     
     /// Remove all markers from the map
     public func clearAllMarkers() {
         mapProviderInstance.clearAllMarkers()
-        markers.removeAll()
-        markersById.removeAll()
     }
     
     /// Add a polyline to the map
@@ -258,8 +259,8 @@ public class UniversalMapViewModel: ObservableObject {
         mapProviderInstance.setEdgeInsets(edgeInsets)
         
         // Re-add all markers
-        for marker in markers {
-            mapProviderInstance.addMarker(marker)
+        for marker in markersById.values {
+            mapProviderInstance.updateMarker(marker)
         }
         
         // Re-add all polylines

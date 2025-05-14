@@ -13,7 +13,7 @@ import CoreLocation
 
 /// Implementation of the map provider protocol for MapLibre
 public class MapLibreProvider: NSObject, MapProviderProtocol {
-    private var viewModel = MapLibreWrapperModel()
+    var viewModel = MapLibreWrapperModel()
     private var mapStyle: UniversalMapStyle = .light
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?
@@ -24,7 +24,10 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         self.viewModel.mapView?.userLocation?.location
     }
     
-    private var markers: [String: UniversalMapMarker] = [:]
+    public var markers: [String: any UniversalMapMarkerProtocol] {
+        viewModel.markers
+    }
+    
     private var polylines: [String: UniversalMapPolyline] = [:]
     
     required public override init() {
@@ -39,21 +42,26 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         self.mapInsets = insets.toMapLibreEdgeInsets()
     }
     
-    public func addMarker(_ marker: UniversalMapMarker) {
-        markers[marker.id] = marker
-        viewModel.addMarker(marker.toMapLibreMarker())
+    public func addMarker(_ marker: any UniversalMapMarkerProtocol) {
+        viewModel.addMarker(marker)
+    }
+    
+    public func marker(byId id: String) -> (any UniversalMapMarkerProtocol)? {
+        self.markers[id]
+    }
+    
+    public func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
+        viewModel.updateMarker(marker)
     }
     
     public func removeMarker(withId id: String) {
         if markers[id] != nil {
             viewModel.removeMarker(withId: id)
-            markers.removeValue(forKey: id)
         }
     }
     
     public func clearAllMarkers() {
         viewModel.clearAllMarkers()
-        markers.removeAll()
     }
     
     public func addPolyline(_ polyline: UniversalMapPolyline) {

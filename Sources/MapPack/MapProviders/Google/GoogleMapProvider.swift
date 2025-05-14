@@ -19,6 +19,10 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.viewModel.mapView?.myLocation
     }
     
+    public var markers: [String : any UniversalMapMarkerProtocol] {
+        viewModel.markers
+    }
+    
     required public override init() {
         super.init()
     }
@@ -31,16 +35,26 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         viewModel.mapView?.padding = insets.insets
     }
     
-    public func addMarker(_ marker: UniversalMapMarker) {
-        let marker = marker.toGMSMarker()
+    public func addMarker(_ marker: any UniversalMapMarkerProtocol) {
+        guard let marker = marker as? UniversalMarker else {
+            return
+        }
 
         assert(marker.accessibilityLabel != nil)
 
         viewModel.addMarker(id: marker.accessibilityLabel ?? "", marker: marker)
     }
     
+    public func marker(byId id: String) -> (any UniversalMapMarkerProtocol)? {
+        markers[id]
+    }
+    
     public func removeMarker(withId id: String) {
         viewModel.removeMarker(id: id)
+    }
+    
+    public func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
+        self.viewModel.markers[marker.id]?.set(coordinate: marker.coordinate)
     }
     
     public func clearAllMarkers() {

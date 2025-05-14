@@ -18,6 +18,8 @@ public protocol MapProviderProtocol {
     
     var currentLocation: CLLocation? { get }
     
+    var markers: [String: any UniversalMapMarkerProtocol] { get }
+    
     /// Update the camera position
     func updateCamera(to camera: UniversalMapCamera)
     
@@ -25,7 +27,12 @@ public protocol MapProviderProtocol {
     func setEdgeInsets(_ insets: UniversalMapEdgeInsets)
     
     /// Add a marker to the map
-    func addMarker(_ marker: UniversalMapMarker)
+    func addMarker(_ marker: any UniversalMapMarkerProtocol)
+    
+    func marker(byId id: String) -> (any UniversalMapMarkerProtocol)?
+    
+    /// Add a marker to the map
+    func updateMarker(_ marker: any UniversalMapMarkerProtocol)
     
     /// Remove a marker from the map
     func removeMarker(withId id: String)

@@ -28,7 +28,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     @Published var zoomLevel: Double = 15
     @Published var isMapLoaded: Bool = false
     // Map markers
-    @Published var markers: [MapMarker] = []
+    @Published var markers: [String: UniversalMarker] = [:]
         
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
 
@@ -111,65 +111,48 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
 extension MapLibreWrapperModel {
     // MARK: - Marker Management
     
-    func addMarker(_ marker: MapMarker) {
-        markers.append(marker)
+    func addMarker(_ marker: any UniversalMapMarkerProtocol) {
+        guard let marker = marker as? UniversalMarker else { return }
+        
+        Logging.l("Add marker to map view by id: \(marker.id)")
+        markers[marker.id] = marker
         addMarkerToMap(marker)
     }
     
     func removeMarker(withId id: String) {
-        guard let index = markers.firstIndex(where: { $0.id == id }),
-              let mapView = mapView else { return }
+        guard let mapView = mapView else { return }
         
-        // Remove from the map
-        if let annotation = mapView.annotations?.first(where: { ($0 as? MLNPointAnnotation)?.identifier == id }) {
+        if let annotation = mapView.annotations?.first(where: { ($0 as? UniversalMarker)?.id == id }) {
+            Logging.l("Remove marker from map view by id: \(id)")
             mapView.removeAnnotation(annotation)
         }
         
-        // Remove from our array
-        markers.remove(at: index)
+        markers.removeValue(forKey: id)
+    }
+    
+    func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
+        Logging.l("Update marker")
+        UIView.animate(withDuration: 0.3) {
+            self.removeMarker(withId: marker.id)
+            self.addMarker(marker)
+        }
     }
     
     func clearAllMarkers() {
         guard let mapView = mapView else { return }
-        
-        // Remove all markers from the map
-        for marker in markers {
+
+        for marker in markers.values {
             if let annotation = mapView.annotations?.first(where: { ($0 as? MLNPointAnnotation)?.identifier == marker.id }) {
                 mapView.removeAnnotation(annotation)
             }
         }
         
-        // Clear our array
         markers.removeAll()
     }
     
-    private func addMarkerToMap(_ marker: MapMarker) {
+    private func addMarkerToMap(_ marker: UniversalMarker) {
         guard let mapView = mapView else { return }
-        
-        let point = MLNPointAnnotation()
-        point.coordinate = marker.coordinate
-        point.title = marker.title
-        point.subtitle = marker.subtitle
-        
-        mapView.addAnnotation(point)
-    }
-    
-    // MARK: - Marker Customization Delegate Methods
-    
-    public func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
-        
-        guard let pointAnnotation = annotation as? MLNPointAnnotation,
-              let marker = markers.first(where: { $0.id == pointAnnotation.identifier }) else {
-            return nil
-        }
-
-        let annotationView = MLNAnnotationView(annotation: annotation, reuseIdentifier: "marker")
-        
-        if let image = marker.image {
-            annotationView.largeContentImage = image.withTintColor(marker.tintColor)
-        }
-        
-        return annotationView
+        mapView.addAnnotation(marker)
     }
 }
 
@@ -180,36 +163,14 @@ extension MLNPointAnnotation {
 }
 
 extension MapLibreWrapperModel {
-    func metersAcross(zoomLevel: Double, latitude: CLLocationDegrees, screenWidthPoints: CGFloat, scale: CGFloat = UIScreen.main.scale) -> Double {
-        let tileSize: Double = 256.0 // pixels
-        let earthCircumference: Double = 40_075_016.686  // in meters
-        let zoomScale = pow(2.0, zoomLevel)
-
-        // Pixel width of full world map at this zoom level
-        let totalPixels = zoomScale * tileSize
-
-        // Real-world meters per pixel at this latitude
-        let metersPerPixel = (cos(latitude * Double.pi / 180) * earthCircumference) / totalPixels
-
-        // Total width of map visible on screen in meters
-        return metersPerPixel * Double(screenWidthPoints * scale) + 3500
-    }
-    
     func metersAcrossAtZoomLevel(_ zoomLevel: Double, latitude: CLLocationDegrees, screenWidthPoints: CGFloat, scale: CGFloat = UIScreen.main.scale) -> Double {
-        let earthCircumference: Double = 40075016.686  // meters
-        let tileSize: Double = 256.0 // pixels (standard)
+        let earthCircumference: Double = 40075016.686
+        let tileSize: Double = 256.0
         let latitudeRadians = latitude * Double.pi / 180.0
-
-        // Total pixels at this zoom level
         let mapPixelSize = tileSize * pow(2.0, zoomLevel)
-
-        // Meters per pixel at the given latitude
         let metersPerPixel = (earthCircumference * cos(latitudeRadians)) / mapPixelSize
-
-        // Convert screen width in points to pixels
         let screenWidthPixels = Double(screenWidthPoints) * Double(scale)
 
-        // Total across distance in meters
         return metersPerPixel * screenWidthPixels
     }
 }

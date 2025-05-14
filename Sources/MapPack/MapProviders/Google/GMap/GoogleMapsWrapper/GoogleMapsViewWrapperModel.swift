@@ -21,7 +21,7 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     public private(set) weak var mapView: GMSMapView?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
     
-    public private(set) var markers: [String: GMSMarker] = [:]
+    public private(set) var markers: [String: UniversalMarker] = [:]
     public private(set) var polylines: [String: GMSPolyline] = [:]
     
     func set(map: GMSMapView) {
@@ -68,7 +68,7 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
 }
 
 public extension GoogleMapsViewWrapperModel {
-    func addMarker(id: String, marker: GMSMarker) {
+    func addMarker(id: String, marker: UniversalMarker) {
         self.markers[id] = marker
         marker.map = self.mapView
     }
@@ -122,7 +122,7 @@ extension UniversalMapPolyline {
         
         let gmsPolyline = GMSPolyline(path: path)
         
-        var lineColor: UIColor = polyline.color
+        let lineColor: UIColor = polyline.color
         
         let style = GMSStrokeStyle.solidColor(lineColor)
         gmsPolyline.accessibilityLabel = polyline.id

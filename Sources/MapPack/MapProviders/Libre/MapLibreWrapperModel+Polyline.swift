@@ -253,28 +253,25 @@ extension MapLibreWrapperModel {
 
 extension MapLibreWrapperModel {
     func updateCarMarker(position: CLLocationCoordinate2D, heading: Double) {
-        guard let mapView = mapView else { return }
-        
-        // Create or update a custom car marker
-        let carMarkerId = "navigation-car-marker"
-        
-        // Remove existing car marker if any
-        if let existingMarker = markers.first(where: { $0.id == carMarkerId }) {
-            removeMarker(withId: carMarkerId)
-        }
-        
-        // Create car marker image
-        let carImage = UIImage(systemName: "car.fill")?.withTintColor(.blue)
+//        guard let mapView = mapView else { return }
+//        
+//        let carMarkerId = "navigation-car-marker"
+//        
+//        if let existingMarker = markers.first(where: { $0.id == carMarkerId }) {
+//            removeMarker(withId: carMarkerId)
+//        }
+//        
+//        let carImage = UIImage(systemName: "car.fill")?.withTintColor(.blue)
         
         // Add new car marker
-        let carMarker = MapMarker(
-            id: carMarkerId,
-            coordinate: position,
-            title: "Current Location",
-            image: carImage,
-            tintColor: .blue
-        )
-        
-        addMarker(carMarker)
+//        let carMarker = LibreMarker(
+//            id: carMarkerId,
+//            coordinate: position,
+//            title: "Current Location",
+//            annotationView: nil,
+//            tintColor: .blue
+//        )
+//        
+//        addMarker(carMarker)
     }
 }

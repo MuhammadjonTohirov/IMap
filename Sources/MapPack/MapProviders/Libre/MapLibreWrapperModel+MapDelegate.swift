@@ -39,8 +39,8 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
     // Handle tap on annotation
     public func mapView(_ mapView: MLNMapView, didSelect annotation: MLNAnnotation) {
         Task { @MainActor in
-            if let pointAnnotation = annotation as? MLNPointAnnotation {
-                let handled = self.interactionDelegate?.mapDidTapMarker(id: pointAnnotation.identifier) ?? false
+            if let pointAnnotation = annotation as? UniversalMarker {
+                let handled = self.interactionDelegate?.mapDidTapMarker(id: pointAnnotation.id) ?? false
                 
                 // If the delegate handled the tap, deselect the annotation
                 if handled {
@@ -52,5 +52,28 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
     
     public func mapViewDidBecomeIdle(_ mapView: MLNMapView) {
 
+    }
+    
+    public func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
+        
+        guard let pointAnnotation = annotation as? UniversalMarker,
+              let marker = markers[pointAnnotation.id] else {
+            Logging.l(tag: "MapLibre", "No marker found for \(annotation)")
+            return nil
+        }
+        
+        if let identifer = marker.reuseIdentifier {
+            
+            let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifer) ?? MLNAnnotationView(annotation: annotation, reuseIdentifier: identifer)
+            if let _view = marker.view {
+                view.addSubview(_view)
+            }
+            Logging.l(tag: "MapLibre", "Annotation view reused for \(identifer)")
+            return view
+        }
+        
+        let annotationView = MLNAnnotationView(annotation: annotation, reuseIdentifier: "marker")
+        Logging.l(tag: "MapLibre", "Annotation view created")
+        return annotationView
     }
 }
