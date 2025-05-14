@@ -43,6 +43,19 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         mapView?.animate(to: GMSCameraPosition(target: coordinate, zoom: zoom, bearing: 0, viewingAngle: viewAngle))
     }
     
+    func focusTo(coordinates: [CLLocationCoordinate2D], padding: CGFloat, animated: Bool) {
+        guard !coordinates.isEmpty else { return }
+        
+        var bounds = GMSCoordinateBounds()
+        
+        for coordinate in coordinates {
+            bounds = bounds.includingCoordinate(coordinate)
+        }
+        
+        let update = GMSCameraUpdate.fit(bounds, withPadding: padding)
+        mapView?.animate(with: update)
+    }
+    
     func focusTo(polyline id: String, edges: UIEdgeInsets) {
         guard let pline = self.polylines[id], let path = pline.path else { return }
         mapView?.animate(with: GMSCameraUpdate.fit(.init(path: path), with: edges))

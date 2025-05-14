@@ -93,6 +93,14 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         viewModel.focusTo(coordinate: coordinate, zoom: Float(zoom ?? 0))
     }
     
+    public func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {
+        focusOn(coordinates: coordinates, padding: edges.top, animated: animated)
+    }
+    
+    public func focusOn(coordinates: [CLLocationCoordinate2D], padding: CGFloat, animated: Bool) {
+        viewModel.focusTo(coordinates: coordinates, padding: padding, animated: animated)
+    }
+    
     /// `animate` will be ignored
     public func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool) {
         viewModel.focusTo(polyline: id, edges: padding)

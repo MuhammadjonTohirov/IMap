@@ -117,6 +117,10 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         viewModel.focusOnPolyline(id: id)
     }
     
+    public func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {
+        viewModel.focusOn(coordinates: coordinates, edges: edges, animated: animated)
+    }
+
     public func setInput(input: any UniversalMapInputProvider) {
         self.viewModel.set(inputProvider: input)
     }

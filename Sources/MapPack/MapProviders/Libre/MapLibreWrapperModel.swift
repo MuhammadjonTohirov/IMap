@@ -154,6 +154,10 @@ extension MapLibreWrapperModel {
         guard let mapView = mapView else { return }
         mapView.addAnnotation(marker)
     }
+    
+    func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {
+        self.mapView?.setVisibleCoordinates(coordinates, count: UInt(coordinates.count), edgePadding: edges, animated: animated)
+    }
 }
 
 extension MLNPointAnnotation {

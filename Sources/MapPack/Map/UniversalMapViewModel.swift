@@ -201,6 +201,14 @@ public class UniversalMapViewModel: ObservableObject {
         mapProviderInstance.focusOnPolyline(id: id, padding: padding, animated: animated)
     }
     
+    public func focusTo(coordinates: [CLLocationCoordinate2D], padding: CGFloat = 0, animated: Bool) {
+        mapProviderInstance.focusOn(coordinates: coordinates, padding: padding, animated: animated)
+    }
+    
+    public func focusTo(coordinates: [CLLocationCoordinate2D], edge: UIEdgeInsets, animated: Bool) {
+        mapProviderInstance.focusOn(coordinates: coordinates, edges: edge, animated: animated)
+    }
+    
     /// Get the current map view
     public func makeMapView() -> AnyView {
         return mapProviderInstance.makeMapView()

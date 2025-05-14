@@ -67,8 +67,18 @@ public protocol MapProviderProtocol {
     /// Fit the map to show a specific polyline
     func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool)
     
+    func focusOn(coordinates: [CLLocationCoordinate2D], padding: CGFloat, animated: Bool)
+    
+    func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool)
+    
     /// Get the SwiftUI view for this map provider
     func makeMapView() -> AnyView
     
     func setInput(input: any UniversalMapInputProvider)
+}
+
+public extension MapProviderProtocol {
+    func focusOn(coordinates: [CLLocationCoordinate2D], padding: CGFloat, animated: Bool) {
+        self.focusOn(coordinates: coordinates, edges: .init(top: padding, left: padding, bottom: padding, right: padding), animated: animated)
+    }
 }
