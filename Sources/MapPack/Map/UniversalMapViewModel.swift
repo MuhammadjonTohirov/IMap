@@ -287,7 +287,7 @@ public class UniversalMapViewModel: ObservableObject {
 extension UniversalMapViewModel: MapInteractionDelegate {
     public func mapDidStartDragging() {
         self.addressInfo = nil
-        self.delegate?.mapDidStartMoving(map: self.mapProviderInstance)
+        self.delegate?.mapDidStartDragging(map: self.mapProviderInstance)
     }
     
     public func mapDidStartMoving() {

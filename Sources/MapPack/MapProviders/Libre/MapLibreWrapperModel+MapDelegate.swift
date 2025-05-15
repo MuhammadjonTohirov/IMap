@@ -11,13 +11,6 @@ import MapLibre
 // MARK: - MLNMapViewDelegate Methods
 
 extension MapLibreWrapperModel: MLNMapViewDelegate {
-    public func mapView(_ mapView: MLNMapView, regionWillChangeAnimated animated: Bool) {
-        Task { @MainActor in
-            self.interactionDelegate?.mapDidStartDragging()
-            self.interactionDelegate?.mapDidStartMoving()
-        }
-    }
-    
     public func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
         Task { @MainActor in
             Logging.l("Map region did change animated: \(animated)")
@@ -27,6 +20,16 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
                     longitude: mapView.centerCoordinate.longitude
                 )
             )
+        }
+    }
+    
+    public func mapView(_ mapView: MLNMapView, regionWillChangeWith reason: MLNCameraChangeReason, animated: Bool) {
+        Task { @MainActor in
+            if reason == .programmatic {
+                self.interactionDelegate?.mapDidStartMoving()
+            } else {
+                self.interactionDelegate?.mapDidStartDragging()
+            }
         }
     }
     
