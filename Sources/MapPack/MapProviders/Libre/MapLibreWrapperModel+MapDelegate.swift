@@ -73,10 +73,12 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
                 view.addSubview(_view)
             }
             Logging.l(tag: "MapLibre", "Annotation view reused for \(identifer)")
+            view.layer.zPosition = CGFloat(marker.zIndex)
             return view
         }
         
         let annotationView = MLNAnnotationView(annotation: annotation, reuseIdentifier: "marker")
+        annotationView.layer.zPosition = CGFloat(marker.zIndex)
         Logging.l(tag: "MapLibre", "Annotation view created")
         return annotationView
     }
