@@ -192,19 +192,23 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     /// Focus the map on a specific coordinate
-    public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil) {
-        mapProviderInstance.focusMap(on: coordinate, zoom: zoom)
+    @MainActor
+    public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
+        mapProviderInstance.focusMap(on: coordinate, zoom: zoom, animated: animated)
     }
     
     /// Focus the map on a specific polyline
+    @MainActor
     public func focusOnPolyline(id: String, padding: UIEdgeInsets = UIEdgeInsets(top: 50, left: 50, bottom: 50, right: 50), animated: Bool = true) {
         mapProviderInstance.focusOnPolyline(id: id, padding: padding, animated: animated)
     }
     
+    @MainActor
     public func focusTo(coordinates: [CLLocationCoordinate2D], padding: CGFloat = 0, animated: Bool) {
         mapProviderInstance.focusOn(coordinates: coordinates, padding: padding, animated: animated)
     }
     
+    @MainActor
     public func focusTo(coordinates: [CLLocationCoordinate2D], edge: UIEdgeInsets, animated: Bool) {
         mapProviderInstance.focusOn(coordinates: coordinates, edges: edge, animated: animated)
     }
@@ -219,12 +223,13 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     @MainActor
-    public func focusToCurrentLocation() {
+    public func focusToCurrentLocation(animated: Bool = true) {
         guard let location = self.mapProviderInstance.currentLocation else { return }
         
         self.mapProviderInstance.focusMap(
             on: location.coordinate,
-            zoom: defaultZoomLevel
+            zoom: defaultZoomLevel,
+            animated: animated
         )
     }
     
@@ -281,10 +286,12 @@ public class UniversalMapViewModel: ObservableObject {
 // MARK: - MapInteractionDelegate Implementation
 extension UniversalMapViewModel: MapInteractionDelegate {
     public func mapDidStartDragging() {
+        self.addressInfo = nil
         self.delegate?.mapDidStartMoving(map: self.mapProviderInstance)
     }
     
     public func mapDidStartMoving() {
+        self.addressInfo = nil
         self.delegate?.mapDidStartMoving(map: self.mapProviderInstance)
     }
     

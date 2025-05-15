@@ -89,8 +89,8 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.viewModel.set(mapDelegate: delegate)
     }
     
-    public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?) {
-        viewModel.focusTo(coordinate: coordinate, zoom: Float(zoom ?? 0))
+    public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?, animated: Bool) {
+        viewModel.focusTo(coordinate: coordinate, zoom: Float(zoom ?? 0), animate: animated)
     }
     
     public func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {

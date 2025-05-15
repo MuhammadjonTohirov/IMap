@@ -13,6 +13,7 @@ import MapLibre
 extension MapLibreWrapperModel: MLNMapViewDelegate {
     public func mapView(_ mapView: MLNMapView, regionWillChangeAnimated animated: Bool) {
         Task { @MainActor in
+            self.interactionDelegate?.mapDidStartDragging()
             self.interactionDelegate?.mapDidStartMoving()
         }
     }

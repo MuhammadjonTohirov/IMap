@@ -62,7 +62,7 @@ public protocol MapProviderProtocol {
     func setInteractionDelegate(_ delegate: MapInteractionDelegate?)
     
     /// Focus on specific coordinates with optional zoom level
-    func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?)
+    func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?, animated: Bool)
     
     /// Fit the map to show a specific polyline
     func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool)

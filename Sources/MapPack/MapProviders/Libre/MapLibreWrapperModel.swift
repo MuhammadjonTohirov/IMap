@@ -62,7 +62,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         mapView.setCamera(camera, animated: animated)
     }
     
-    func flyTo(coordinate: CLLocationCoordinate2D, zoom: Double? = nil) {
+    func flyTo(coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
         guard let mapView = mapView else { return }
         let _zoom = (zoom ?? self.zoomLevel) / 1.036
         let acrossDistance = metersAcrossAtZoomLevel(
@@ -79,7 +79,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
             mapView.zoomLevel = zoom
         }
         
-        mapView.setCamera(camera, animated: true)
+        mapView.setCamera(camera, animated: animated)
     }
     
     func set(mapDelegate: MapInteractionDelegate?) {

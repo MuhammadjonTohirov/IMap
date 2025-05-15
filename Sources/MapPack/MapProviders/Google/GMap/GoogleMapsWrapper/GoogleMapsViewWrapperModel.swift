@@ -39,8 +39,12 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         self.interactionDelegate = mapDelegate
     }
     
-    func focusTo(coordinate: CLLocationCoordinate2D, zoom: Float = 15, viewAngle: Double = 0) {
-        mapView?.animate(to: GMSCameraPosition(target: coordinate, zoom: zoom, bearing: 0, viewingAngle: viewAngle))
+    func focusTo(coordinate: CLLocationCoordinate2D, zoom: Float = 15, viewAngle: Double = 0, animate: Bool = true) {
+        if animate {
+            mapView?.animate(to: GMSCameraPosition(target: coordinate, zoom: zoom, bearing: 0, viewingAngle: viewAngle))
+        } else {
+            mapView?.camera = GMSCameraPosition(target: coordinate, zoom: zoom, bearing: 0, viewingAngle: viewAngle)
+        }
     }
     
     func focusTo(coordinates: [CLLocationCoordinate2D], padding: CGFloat, animated: Bool) {

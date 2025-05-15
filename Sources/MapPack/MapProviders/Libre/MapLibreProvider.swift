@@ -109,8 +109,8 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         self.viewModel.set(mapDelegate: delegate)
     }
     
-    public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?) {
-        viewModel.centerMap(on: coordinate, zoom: zoom, animated: true)
+    public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?, animated: Bool) {
+        viewModel.centerMap(on: coordinate, zoom: zoom, animated: animated)
     }
     
     public func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool) {
