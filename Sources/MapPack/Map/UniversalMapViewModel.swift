@@ -55,7 +55,8 @@ public class UniversalMapViewModel: ObservableObject {
     
     public private(set) var defaultZoomLevel: Double = 15
     var pinViewBottomOffset: CGFloat {
-        let bottomOffset = self.edgeInsets.insets.bottom
+        let sarea = UIApplication.shared.safeArea
+        let bottomOffset = self.edgeInsets.insets.bottom - sarea.top
         
         return bottomOffset
     }

@@ -32,11 +32,11 @@ public struct UniversalMapView: View {
                     ZStack {
                         addressView
                             .padding(.bottom, viewModel.pinViewBottomOffset + 200)
-                            .visibility(viewModel.hasAddressView)
+//                            .visibility(viewModel.hasAddressView)
                         
                         PinView(vm: viewModel.pinModel)
                             .padding(.bottom, viewModel.pinViewBottomOffset)
-                            .visibility(viewModel.hasAddressPicker)
+//                            .visibility(viewModel.hasAddressPicker)
                     }
                 }
                 .ignoreSafeArea(if: self.viewModel.mapProvider == .mapLibre)
