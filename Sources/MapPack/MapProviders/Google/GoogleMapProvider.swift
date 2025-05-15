@@ -54,7 +54,10 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
-        self.viewModel.markers[marker.id]?.set(coordinate: marker.coordinate)
+        let mrk = self.viewModel.markers[marker.id]
+        
+        mrk?.set(coordinate: marker.coordinate)
+        mrk?.set(heading: marker.rotation)
     }
     
     public func clearAllMarkers() {

@@ -14,6 +14,7 @@ import GoogleMaps
 public protocol UniversalMapMarkerProtocol: Identifiable {
     var id: String { get }
     var coordinate: CLLocationCoordinate2D { get }
+    var rotation: CLLocationDirection { get }
 }
 
 extension CLLocationCoordinate2D {

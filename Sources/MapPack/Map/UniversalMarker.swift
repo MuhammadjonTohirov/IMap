@@ -68,5 +68,8 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
         self.position = coordinate
         self.coordinate = coordinate
     }
+    
+    public func set(heading: CLLocationDirection) {
+        self.rotation = heading
+    }
 }
-

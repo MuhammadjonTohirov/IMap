@@ -132,10 +132,8 @@ extension MapLibreWrapperModel {
     
     func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
         Logging.l("Update marker")
-        UIView.animate(withDuration: 0.3) {
-            self.removeMarker(withId: marker.id)
-            self.addMarker(marker)
-        }
+        self.removeMarker(withId: marker.id)
+        self.addMarker(marker)
     }
     
     func clearAllMarkers() {
