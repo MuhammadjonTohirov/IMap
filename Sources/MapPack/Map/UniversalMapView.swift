@@ -35,8 +35,8 @@ public struct UniversalMapView: View {
                             .visibility(viewModel.hasAddressView)
                         
                         PinView(vm: viewModel.pinModel)
-                            .padding(.bottom, viewModel.pinViewBottomOffset)
                             .visibility(viewModel.hasAddressPicker)
+                            .padding(.bottom, viewModel.pinViewBottomOffset)
                     }
                 }
                 .ignoreSafeArea(if: self.viewModel.mapProvider == .mapLibre)

@@ -56,7 +56,8 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         viewModel.mapView = view
         viewModel.setupGestureLocker()
         view.anchorRotateOrZoomGesturesToCenterCoordinate = true
-
+        view.attributionButton.isHidden = true
+        view.logoView.isHidden = true
         return view
     }
     

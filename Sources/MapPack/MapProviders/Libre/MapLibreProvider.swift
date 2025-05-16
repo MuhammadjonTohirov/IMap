@@ -98,10 +98,12 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     
     public func showUserLocation(_ show: Bool) {
         self.showsUserLocation = show
+        self.viewModel.mapView?.showsUserLocation = show
     }
     
     public func setUserTrackingMode(_ tracking: Bool) {
         self.userTrackingMode = tracking ? .followWithHeading : nil
+        self.viewModel.mapView?.userTrackingMode = tracking ? .followWithHeading : .none
     }
     
     public func setInteractionDelegate(_ delegate: MapInteractionDelegate?) {
