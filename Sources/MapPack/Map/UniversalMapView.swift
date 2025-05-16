@@ -14,6 +14,9 @@ public struct UniversalMapView: View {
     /// The view model that manages the map state and operations
     @ObservedObject private var viewModel: UniversalMapViewModel
     
+    @Environment(\.colorScheme)
+    var colorScheme: ColorScheme
+    
     /// Initialize with a specific map provider (defaults to Google Maps)
     public init(provider: MapProvider, input: (any UniversalMapInputProvider)?) {
         self.viewModel = UniversalMapViewModel(mapProvider: provider, input: input)
@@ -40,6 +43,19 @@ public struct UniversalMapView: View {
                     }
                 }
                 .ignoreSafeArea(if: self.viewModel.mapProvider == .mapLibre)
+        }
+        .onChange(of: colorScheme) { newValue in
+            switch newValue {
+            case .dark:
+                viewModel.mapProviderInstance.setMapStyle(.dark)
+            case .light:
+                viewModel.mapProviderInstance.setMapStyle(.light)
+            @unknown default:
+                break
+            }
+        }
+        .onAppear {
+            viewModel.mapProviderInstance.setMapStyle(colorScheme == .dark ? .dark : .light)
         }
     }
     
