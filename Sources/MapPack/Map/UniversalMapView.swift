@@ -46,7 +46,8 @@ public struct UniversalMapView: View {
     private var addressView: some View {
         Text(viewModel.addressInfo?.name ?? "Loading...")
             .foregroundStyle(.white)
-            .padding(4)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
             .font(.system(size: 14, weight: .medium))
             .background {
                 Capsule()

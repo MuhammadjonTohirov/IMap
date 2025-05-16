@@ -248,6 +248,11 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     @MainActor
+    public func set(addressViewInfo: AddressInfo?) {
+        self.addressInfo = addressViewInfo
+    }
+    
+    @MainActor
     public func set(polylines: [UniversalMapPolyline]) {
         self.polylines = polylines
         self.polylines.forEach { line in
