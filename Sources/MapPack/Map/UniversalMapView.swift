@@ -51,6 +51,7 @@ public struct UniversalMapView: View {
             .font(.system(size: 14, weight: .medium))
             .background {
                 Capsule()
+                    .foregroundStyle(.black)
             }
     }
     
