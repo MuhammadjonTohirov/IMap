@@ -71,6 +71,9 @@ public protocol MapProviderProtocol {
     
     func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool)
     
+    @MainActor
+    func set(disabled: Bool) 
+    
     /// Get the SwiftUI view for this map provider
     func makeMapView() -> AnyView
     

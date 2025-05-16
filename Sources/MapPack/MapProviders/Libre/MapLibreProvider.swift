@@ -127,6 +127,11 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         self.viewModel.set(inputProvider: input)
     }
     
+    @MainActor
+    public func set(disabled: Bool) {
+        self.viewModel.mapView?.isScrollEnabled = !disabled
+    }
+    
     public func makeMapView() -> AnyView {
         return AnyView(
             MLNMapViewWrapper(

@@ -114,6 +114,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.viewModel.set(inputProvider: input)
     }
     
+    @MainActor
+    public func set(disabled: Bool) {
+        self.viewModel.mapView?.isUserInteractionEnabled = !disabled
+    }
+    
     public func makeMapView() -> AnyView {
         return AnyView(
             GoogleMapView(

@@ -192,6 +192,11 @@ public class UniversalMapViewModel: ObservableObject {
         mapProviderInstance.clearAllPolylines()
     }
     
+    @MainActor
+    public func set(disabled: Bool) {
+        self.mapProviderInstance.set(disabled: disabled)
+    }
+    
     /// Focus the map on a specific coordinate
     @MainActor
     public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
