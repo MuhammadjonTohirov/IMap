@@ -113,8 +113,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         let currentZoom = mapView.zoomLevel
         let targetZoom = Double(minLevel)
         
-        // Ensure we don't zoom out beyond the minimum level
-        guard currentZoom > targetZoom else { return }
+        let newZoom = max(currentZoom - shift, targetZoom)
         
         // Animate to a zoomed-out level
         mapView.setCamera(
@@ -122,7 +121,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
             withDuration: 0.2,
             animationTimingFunction: CAMediaTimingFunction(name: .easeInEaseOut)
         )
-        mapView.setZoomLevel(currentZoom - shift, animated: true)
+        mapView.setZoomLevel(newZoom, animated: true)
     }
 }
 

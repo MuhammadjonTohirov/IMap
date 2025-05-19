@@ -70,11 +70,10 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         let currentZoom = mapView.camera.zoom
         let targetZoom = minLevel
         
-        // Ensure we don't zoom out beyond the minimum level
-        guard currentZoom > targetZoom else { return }
+        let newZoom = max(currentZoom - Float(shift), targetZoom)
 
         UIView.animate(withDuration: 0.2) {
-            self.mapView?.animate(toZoom: currentZoom - Float(shift))
+            self.mapView?.animate(toZoom: newZoom)
         }
     }
 }
