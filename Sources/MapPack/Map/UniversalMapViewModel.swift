@@ -200,7 +200,7 @@ public class UniversalMapViewModel: ObservableObject {
     /// Focus the map on a specific coordinate
     @MainActor
     public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
-        mapProviderInstance.focusMap(on: coordinate, zoom: zoom, animated: animated)
+        mapProviderInstance.focusMap(on: coordinate, zoom: zoom ?? defaultZoomLevel, animated: animated)
     }
     
     /// Focus the map on a specific polyline
