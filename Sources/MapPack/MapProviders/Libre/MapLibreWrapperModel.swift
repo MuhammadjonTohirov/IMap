@@ -106,6 +106,24 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
             break
         }
     }
+    
+    func zoomOut(minLevel: Float = 10) {
+        guard let mapView = self.mapView else { return }
+        
+        let currentZoom = mapView.zoomLevel
+        let targetZoom = Double(minLevel)
+        
+        // Ensure we don't zoom out beyond the minimum level
+        guard currentZoom > targetZoom else { return }
+        
+        // Animate to a zoomed-out level
+        mapView.setCamera(
+            mapView.camera,
+            withDuration: 0.2,
+            animationTimingFunction: CAMediaTimingFunction(name: .easeInEaseOut)
+        )
+        mapView.setZoomLevel(currentZoom - 1, animated: true)
+    }
 }
 
 extension MapLibreWrapperModel {

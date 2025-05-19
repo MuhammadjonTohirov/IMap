@@ -268,6 +268,11 @@ public class UniversalMapViewModel: ObservableObject {
         polylines.removeAll()
     }
     
+    @MainActor
+    public func zoomOut(minLevel: Float = 10) {
+        mapProviderInstance.zoomOut(minLevel: minLevel)
+    }
+    
     // MARK: - Private Methods
     
     /// Update the map provider with all current configuration

@@ -132,6 +132,10 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         self.viewModel.mapView?.isScrollEnabled = !disabled
     }
     
+    public func zoomOut(minLevel: Float = 10) {
+        self.viewModel.zoomOut(minLevel: minLevel)
+    }
+    
     public func makeMapView() -> AnyView {
         return AnyView(
             MLNMapViewWrapper(

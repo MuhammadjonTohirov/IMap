@@ -78,6 +78,9 @@ public protocol MapProviderProtocol {
     func makeMapView() -> AnyView
     
     func setInput(input: any UniversalMapInputProvider)
+    
+    @MainActor
+    func zoomOut(minLevel: Float)
 }
 
 public extension MapProviderProtocol {

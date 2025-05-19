@@ -17,7 +17,6 @@ public protocol GoogleMapsKeyProvider: UniversalMapInputProvider, AnyObject {
 }
 
 open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
-    // Map view reference
     public private(set) weak var mapView: GMSMapView?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
     
@@ -63,6 +62,20 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     func focusTo(polyline id: String, edges: UIEdgeInsets) {
         guard let pline = self.polylines[id], let path = pline.path else { return }
         mapView?.animate(with: GMSCameraUpdate.fit(.init(path: path), with: edges))
+    }
+    
+    func zoomOut(minLevel: Float = 10) {
+        guard let mapView = self.mapView else { return }
+        
+        let currentZoom = mapView.camera.zoom
+        let targetZoom = minLevel
+        
+        // Ensure we don't zoom out beyond the minimum level
+        guard currentZoom > targetZoom else { return }
+
+        UIView.animate(withDuration: 0.2) {
+            self.mapView?.animate(toZoom: currentZoom - 1)
+        }
     }
 }
 
