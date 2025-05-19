@@ -128,7 +128,8 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         )
     }
     
-    public func zoomOut(minLevel: Float = 10) {
-        self.viewModel.zoomOut(minLevel: minLevel)
+    @MainActor
+    public func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
+        self.viewModel.zoomOut(minLevel: minLevel, shift: shift)
     }
 }

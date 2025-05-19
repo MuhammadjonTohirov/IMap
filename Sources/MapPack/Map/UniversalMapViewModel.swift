@@ -53,7 +53,7 @@ public class UniversalMapViewModel: ObservableObject {
     public private(set) var hasAddressPicker: Bool = true
     public private(set) var hasAddressView: Bool = true
     
-    public private(set) var defaultZoomLevel: Double = 15
+    public private(set) var defaultZoomLevel: Double = 17
     var pinViewBottomOffset: CGFloat {
         let sarea = UIApplication.shared.safeArea
         let bottomOffset = self.edgeInsets.insets.bottom - sarea.top
@@ -269,8 +269,8 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     @MainActor
-    public func zoomOut(minLevel: Float = 10) {
-        mapProviderInstance.zoomOut(minLevel: minLevel)
+    public func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
+        mapProviderInstance.zoomOut(minLevel: minLevel, shift: shift)
     }
     
     // MARK: - Private Methods

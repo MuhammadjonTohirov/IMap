@@ -64,7 +64,7 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         mapView?.animate(with: GMSCameraUpdate.fit(.init(path: path), with: edges))
     }
     
-    func zoomOut(minLevel: Float = 10) {
+    func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
         guard let mapView = self.mapView else { return }
         
         let currentZoom = mapView.camera.zoom
@@ -74,7 +74,7 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         guard currentZoom > targetZoom else { return }
 
         UIView.animate(withDuration: 0.2) {
-            self.mapView?.animate(toZoom: currentZoom - 1)
+            self.mapView?.animate(toZoom: currentZoom - Float(shift))
         }
     }
 }

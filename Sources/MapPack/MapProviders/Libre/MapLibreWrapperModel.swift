@@ -107,7 +107,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         }
     }
     
-    func zoomOut(minLevel: Float = 10) {
+    func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
         guard let mapView = self.mapView else { return }
         
         let currentZoom = mapView.zoomLevel
@@ -122,7 +122,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
             withDuration: 0.2,
             animationTimingFunction: CAMediaTimingFunction(name: .easeInEaseOut)
         )
-        mapView.setZoomLevel(currentZoom - 1, animated: true)
+        mapView.setZoomLevel(currentZoom - shift, animated: true)
     }
 }
 

@@ -80,7 +80,7 @@ public protocol MapProviderProtocol {
     func setInput(input: any UniversalMapInputProvider)
     
     @MainActor
-    func zoomOut(minLevel: Float)
+    func zoomOut(minLevel: Float, shift: Double)
 }
 
 public extension MapProviderProtocol {
