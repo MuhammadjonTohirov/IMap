@@ -3,23 +3,22 @@
 import Foundation
 import CoreLocation
 import Combine
-import SwiftUI
 
 /// Centralized location tracking manager
 public class LocationTrackingManager: NSObject, ObservableObject {
     // MARK: - Published Properties
     @Published public private(set) var trackingMode: MapTrackingMode = .none
-    @Published public private(set) var currentLocation: CLLocation?
+    @Published public var currentLocation: CLLocation?
     @Published public private(set) var isTrackingActive: Bool = false
     
     // MARK: - Private Properties
     private let locationManager = CLLocationManager()
     private var cancellables = Set<AnyCancellable>()
-    private weak var mapProvider: MapProviderProtocol?
-    private weak var delegate: LocationTrackingDelegate?
+    private(set) weak var mapProvider: MapProviderProtocol?
+    private(set) weak var delegate: LocationTrackingDelegate?
     
-    private var defaultZoomLevel: Double = 17
-    private var trackingZoomLevel: Double?
+    private(set) var defaultZoomLevel: Double = 17
+    private(set) var trackingZoomLevel: Double?
     
     // MARK: - Initialization
     public override init() {
@@ -84,8 +83,8 @@ public class LocationTrackingManager: NSObject, ObservableObject {
                 return
             }
             
-            Task {@MainActor in
-                requestLocationPermission()
+            Task { @MainActor in
+                self.requestLocationPermission()
             }
         }
     }
@@ -104,10 +103,7 @@ public class LocationTrackingManager: NSObject, ObservableObject {
             animate: true
         )
         
-        UIView.animate(withDuration: 0.3) {
-            
-            self.mapProvider?.updateCamera(to: camera)
-        }
+        mapProvider?.updateCamera(to: camera)
     }
     
     private func updateCameraForMarker(_ markerId: String) {
@@ -130,7 +126,8 @@ public class LocationTrackingManager: NSObject, ObservableObject {
 extension LocationTrackingManager: LocationTrackingProtocol {
     
     public func trackCurrentLocationOnMap(zoom: Double? = nil) {
-        Logging.l(tag: "LocationTracking", "Starting current location tracking with zoom: \(zoom ?? self.defaultZoomLevel)")
+        let defaultZoomLevel = self.defaultZoomLevel
+        Logging.l(tag: "LocationTracking", "Starting current location tracking with zoom: \(zoom ?? defaultZoomLevel)")
         
         trackingMode = .currentLocation(zoom: zoom)
         trackingZoomLevel = zoom
@@ -147,7 +144,8 @@ extension LocationTrackingManager: LocationTrackingProtocol {
     }
     
     public func trackMarker(_ markerId: String, zoom: Double? = nil) {
-        Logging.l(tag: "LocationTracking", "Starting marker tracking for ID: \(markerId) with zoom: \(zoom ?? self.defaultZoomLevel)")
+        let defaultZoomLevel = self.defaultZoomLevel
+        Logging.l(tag: "LocationTracking", "Starting marker tracking for ID: \(markerId) with zoom: \(zoom ?? defaultZoomLevel)")
         
         guard mapProvider?.marker(byId: markerId) != nil else {
             let error = NSError(domain: "LocationTracking", code: 3, userInfo: [NSLocalizedDescriptionKey: "Marker with ID \(markerId) not found"])
@@ -200,7 +198,9 @@ extension LocationTrackingManager: CLLocationManagerDelegate {
     
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
-        handleLocationUpdate(location)
+        
+        // Use throttled updates for smoother performance
+        handleLocationUpdateThrottled(location)
     }
     
     public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -255,7 +255,8 @@ extension LocationTrackingManager: CLLocationManagerDelegate {
     }
     
     public func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        Logging.l(tag: "LocationTracking", "Authorization status changed to: \(self.authorizationStatusString(status))")
+        let authString = authorizationStatusString(status)
+        Logging.l(tag: "LocationTracking", "Authorization status changed to: \(authString)")
         
         switch status {
         case .authorizedWhenInUse, .authorizedAlways:

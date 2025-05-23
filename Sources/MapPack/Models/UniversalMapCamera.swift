@@ -37,34 +37,4 @@ public struct UniversalMapCamera {
         self.pitch = pitch
         self.animate = animate
     }
-    
-    /// Converts to a Google Maps camera position
-    internal func toGMSCamera() -> GMapCamera {
-        let position = GMSCameraPosition(
-            target: center,
-            zoom: Float(zoom),
-            bearing: bearing,
-            viewingAngle: pitch
-        )
-        
-        return GMapCamera(
-            camera: position,
-            cameraUpdate: nil,
-            animate: animate
-        )
-    }
-    
-    /// Converts to a MapLibre camera position
-    internal func toMLNCamera() -> MapCamera {
-        // MapLibre uses distance instead of zoom level, approximate conversion
-        let distance = 1000.0 / pow(2, zoom - 13)
-        
-        return MapCamera.lookingAt(
-            center: center,
-            fromDistance: distance,
-            pitch: CGFloat(pitch),
-            heading: bearing,
-            animate: animate
-        )
-    }
 }

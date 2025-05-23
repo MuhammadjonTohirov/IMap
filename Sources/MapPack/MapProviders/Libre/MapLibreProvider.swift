@@ -35,13 +35,30 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     }
     
     public func updateCamera(to camera: UniversalMapCamera) {
-        let accrossDistance = viewModel.metersAcrossAtZoomLevel(
+        guard let mapView = viewModel.mapView else { return }
+        
+        let acrossDistance = viewModel.metersAcrossAtZoomLevel(
             camera.zoom,
             latitude: camera.center.latitude,
             screenWidthPoints: UIApplication.shared.screenFrame.width
         )
         
-        self.mapCamera = MapCamera(camera: .init(lookingAtCenter: camera.center, acrossDistance: accrossDistance, pitch: camera.pitch, heading: camera.bearing), animate: true)
+        let targetCamera = MLNMapCamera(lookingAtCenter: camera.center, acrossDistance: acrossDistance, pitch: camera.pitch, heading: camera.bearing)
+        
+        if camera.animate {
+            mapView.setCamera(
+                targetCamera,
+                withDuration: 1, // Smooth animation duration
+                animationTimingFunction: CAMediaTimingFunction(name: .easeOut)
+            ) {
+                Logging.l(tag: "MapLibre", "Camera animation completed")
+            }
+        } else {
+            mapView.camera = targetCamera
+        }
+        
+//        
+//        self.viewModel.mapView?.camera = .init(lookingAtCenter: camera.center, acrossDistance: accrossDistance, pitch: camera.pitch, heading: camera.bearing)
     }
     
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
