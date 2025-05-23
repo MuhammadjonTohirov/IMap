@@ -35,7 +35,13 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     }
     
     public func updateCamera(to camera: UniversalMapCamera) {
-        self.mapCamera = camera.toMLNCamera()
+        let accrossDistance = viewModel.metersAcrossAtZoomLevel(
+            camera.zoom,
+            latitude: camera.center.latitude,
+            screenWidthPoints: UIApplication.shared.screenFrame.width
+        )
+        
+        self.mapCamera = MapCamera(camera: .init(lookingAtCenter: camera.center, acrossDistance: accrossDistance, pitch: camera.pitch, heading: camera.bearing), animate: true)
     }
     
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
