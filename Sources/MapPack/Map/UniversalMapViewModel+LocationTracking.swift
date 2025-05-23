@@ -14,7 +14,7 @@ import Combine
 public extension UniversalMapViewModel {
     
     /// Location tracking manager
-    private var locationTrackingManager: LocationTrackingManager {
+    var locationTrackingManager: LocationTrackingManager {
         // Store as associated object to maintain single instance
         if let manager = objc_getAssociatedObject(self, &AssociatedKeys.locationTrackingManager) as? LocationTrackingManager {
             return manager

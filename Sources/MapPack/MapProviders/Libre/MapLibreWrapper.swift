@@ -53,7 +53,7 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         view.tileCacheEnabled = true
         view.isPitchEnabled = false
         view.isHapticFeedbackEnabled = false
-        viewModel.mapView = view
+        viewModel.set(mapView: view)
         viewModel.setupGestureLocker()
         view.anchorRotateOrZoomGesturesToCenterCoordinate = true
         view.attributionButton.isHidden = true

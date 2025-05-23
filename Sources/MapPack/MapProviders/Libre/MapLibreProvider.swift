@@ -13,7 +13,7 @@ import CoreLocation
 
 /// Implementation of the map provider protocol for MapLibre
 public class MapLibreProvider: NSObject, MapProviderProtocol {
-    var viewModel = MapLibreWrapperModel()
+    public private(set) var viewModel = MapLibreWrapperModel()
     private var mapStyle: UniversalMapStyle = .light
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?
@@ -49,7 +49,7 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
             mapView.setCamera(
                 targetCamera,
                 withDuration: 1, // Smooth animation duration
-                animationTimingFunction: CAMediaTimingFunction(name: .easeOut)
+                animationTimingFunction: CAMediaTimingFunction(name: .linear)
             ) {
                 Logging.l(tag: "MapLibre", "Camera animation completed")
             }

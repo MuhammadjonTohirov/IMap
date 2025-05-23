@@ -17,7 +17,7 @@ public protocol LibreMapsKeyProvider: UniversalMapInputProvider, AnyObject {
 
 open class MapLibreWrapperModel: NSObject, ObservableObject {
     // Map view reference
-    weak var mapView: MLNMapView?
+    public private(set) weak var mapView: MLNMapView?
     
     // Published properties
     @Published var isDrawingPolyline: Bool = false
@@ -39,6 +39,10 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     func set(inputProvider: any UniversalMapInputProvider) {
         guard let _ = inputProvider as? LibreMapsKeyProvider else { return }
         
+    }
+    
+    func set(mapView: MLNMapView?) {
+        self.mapView = mapView
     }
     
     // MARK: - Custom Methods
@@ -145,12 +149,6 @@ extension MapLibreWrapperModel {
         }
         
         markers.removeValue(forKey: id)
-    }
-    
-    func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
-        Logging.l("Update marker")
-        self.removeMarker(withId: marker.id)
-        self.addMarker(marker)
     }
     
     func clearAllMarkers() {

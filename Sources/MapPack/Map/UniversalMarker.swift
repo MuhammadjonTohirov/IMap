@@ -13,7 +13,7 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
     public typealias AnnotationViewCompletionHandler = (UniversalMarker) -> UIView?
     
     public let id: String
-    public private(set) var coordinate: CLLocationCoordinate2D
+    dynamic public private(set) var coordinate: CLLocationCoordinate2D
     public let annotationView: AnnotationViewCompletionHandler?
     public let reuseIdentifier: String?
     public let view: UIView?
@@ -71,5 +71,21 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
     
     public func set(heading: CLLocationDirection) {
         self.rotation = heading
+    }
+    
+    public func updatePosition(coordinate: CLLocationCoordinate2D, heading: CLLocationDirection) {
+        self.position = coordinate
+        self.coordinate = coordinate
+        self.rotation = heading
+    }
+    
+    public override func copy() -> Any {
+        let new = type(of: self).init(
+            id: self.id,
+            coordinate: self.coordinate,
+            view: self.view ?? UIView(),
+            reuseIdentifier: self.reuseIdentifier
+        )
+        return new
     }
 }
