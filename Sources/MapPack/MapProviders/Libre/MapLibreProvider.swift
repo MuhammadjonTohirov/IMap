@@ -13,7 +13,7 @@ import CoreLocation
 
 /// Implementation of the map provider protocol for MapLibre
 public class MapLibreProvider: NSObject, MapProviderProtocol {
-    var viewModel = MapLibreWrapperModel()
+    public private(set) var viewModel = MapLibreWrapperModel()
     private var mapStyle: UniversalMapStyle = .light
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?
@@ -35,7 +35,30 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     }
     
     public func updateCamera(to camera: UniversalMapCamera) {
-        self.mapCamera = camera.toMLNCamera()
+        guard let mapView = viewModel.mapView else { return }
+        
+        let acrossDistance = viewModel.metersAcrossAtZoomLevel(
+            camera.zoom,
+            latitude: camera.center.latitude,
+            screenWidthPoints: UIApplication.shared.screenFrame.width
+        )
+        
+        let targetCamera = MLNMapCamera(lookingAtCenter: camera.center, acrossDistance: acrossDistance, pitch: camera.pitch, heading: camera.bearing)
+        
+        if camera.animate {
+            mapView.setCamera(
+                targetCamera,
+                withDuration: 1, // Smooth animation duration
+                animationTimingFunction: CAMediaTimingFunction(name: .linear)
+            ) {
+                Logging.l(tag: "MapLibre", "Camera animation completed")
+            }
+        } else {
+            mapView.camera = targetCamera
+        }
+        
+//        
+//        self.viewModel.mapView?.camera = .init(lookingAtCenter: camera.center, acrossDistance: accrossDistance, pitch: camera.pitch, heading: camera.bearing)
     }
     
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {

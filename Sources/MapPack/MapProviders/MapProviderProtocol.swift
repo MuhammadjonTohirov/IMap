@@ -12,7 +12,7 @@ import CoreLocation
 import UIKit
 
 /// Protocol defining the common interface for map providers
-public protocol MapProviderProtocol {
+public protocol MapProviderProtocol: NSObject {
     /// Initialize the map provider
     init()
     

@@ -28,7 +28,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func updateCamera(to camera: UniversalMapCamera) {
-        viewModel.mapView?.camera = .camera(withTarget: camera.center, zoom: 14)
+        if camera.animate {
+            viewModel.mapView?.animate(to: .camera(withTarget: camera.center, zoom: Float(camera.zoom)))
+        } else {
+            viewModel.mapView?.camera = .camera(withTarget: camera.center, zoom: Float(camera.zoom))
+        }
     }
     
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
