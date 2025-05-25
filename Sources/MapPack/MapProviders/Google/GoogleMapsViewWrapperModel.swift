@@ -91,7 +91,15 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
     
     public func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
         Task {@MainActor in
-            self.interactionDelegate?.mapDidEndDragging(at: .init(latitude: position.target.latitude, longitude: position.target.longitude))
+            let location: CLLocation = .init(
+                coordinate: position.target,
+                altitude: 0, horizontalAccuracy: 0,
+                verticalAccuracy: 0,
+                course: position.bearing,
+                speed: 0,
+                timestamp: Date()
+            )
+            self.interactionDelegate?.mapDidEndDragging(at: location)
         }
     }
 }

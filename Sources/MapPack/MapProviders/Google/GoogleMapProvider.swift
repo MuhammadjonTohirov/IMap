@@ -36,7 +36,10 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
-        viewModel.mapView?.padding = insets.insets
+        viewModel.mapView?.padding.top = insets.insets.top
+        viewModel.mapView?.padding.left = insets.insets.left
+        viewModel.mapView?.padding.right = insets.insets.right
+        viewModel.mapView?.padding.bottom = insets.insets.bottom
     }
     
     public func addMarker(_ marker: any UniversalMapMarkerProtocol) {

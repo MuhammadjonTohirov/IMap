@@ -46,7 +46,6 @@ public class UniversalMapViewModel: ObservableObject {
     @Published public var mapStyle: UniversalMapStyle = .light
     @Published public var showUserLocation: Bool = true
     @Published public var userTrackingMode: Bool = false
-    @Published public var polylines: [UniversalMapPolyline] = []
     @Published public var edgeInsets = UniversalMapEdgeInsets()
     @Published public var addressInfo: AddressInfo?
     
@@ -64,9 +63,15 @@ public class UniversalMapViewModel: ObservableObject {
     public private(set) var pinModel: PinViewModel = .init()
     // Private properties
     public private(set) var mapProviderInstance: MapProviderProtocol
+    
     private var markersById: [String: any UniversalMapMarkerProtocol] {
         mapProviderInstance.markers
     }
+    
+    var polylines: [UniversalMapPolyline] {
+        Array(polylinesById.values)
+    }
+    
     private var polylinesById: [String: UniversalMapPolyline] = [:]
     private var cancellables = Set<AnyCancellable>()
     
@@ -171,23 +176,18 @@ public class UniversalMapViewModel: ObservableObject {
     @discardableResult
     public func addPolyline(_ polyline: UniversalMapPolyline) -> String {
         polylinesById[polyline.id] = polyline
-        polylines.append(polyline)
         mapProviderInstance.addPolyline(polyline)
         return polyline.id
     }
     
     /// Remove a polyline from the map
     public func removePolyline(withId id: String) {
-        if let index = polylines.firstIndex(where: { $0.id == id }) {
-            polylines.remove(at: index)
-        }
         polylinesById.removeValue(forKey: id)
         mapProviderInstance.removePolyline(withId: id)
     }
     
     /// Remove all polylines from the map
     public func clearAllPolylines() {
-        polylines.removeAll()
         polylinesById.removeAll()
         mapProviderInstance.clearAllPolylines()
     }
@@ -254,18 +254,9 @@ public class UniversalMapViewModel: ObservableObject {
     
     @MainActor
     public func set(polylines: [UniversalMapPolyline]) {
-        self.polylines = polylines
-        self.polylines.forEach { line in
+        polylines.forEach { line in
             self.mapProviderInstance.addPolyline(line)
         }
-    }
-    
-    @MainActor
-    public func clearRouteData() {
-        polylines.forEach {
-            self.mapProviderInstance.removePolyline(withId: $0.id)
-        }
-        polylines.removeAll()
     }
     
     @MainActor
