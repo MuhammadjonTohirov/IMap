@@ -28,7 +28,7 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         viewModel.markers
     }
     
-    private var polylines: [String: UniversalMapPolyline] = [:]
+    public var polylines: [String: UniversalMapPolyline] = [:]
     
     required public override init() {
         super.init()

@@ -13,6 +13,9 @@ import GoogleMaps
 /// Implementation of the map provider protocol for Google Maps
 public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     private var viewModel: GoogleMapsViewWrapperModel = .init()
+    
+    public private(set) var polylines: [String : UniversalMapPolyline] = [:]
+    
     private var mapOptions = GMSMapViewOptions()
     
     public var currentLocation: CLLocation? {
@@ -72,15 +75,18 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func addPolyline(_ polyline: UniversalMapPolyline) {
+        self.polylines[polyline.id] = polyline
         self.viewModel.addPolyline(id: polyline.id, polyline: polyline.gmsPolyline())
     }
     
     public func removePolyline(withId id: String) {
         self.viewModel.removePolyline(id: id)
+        self.polylines.removeValue(forKey: id)
     }
     
     public func clearAllPolylines() {
         self.viewModel.removeAllPolylines()
+        self.polylines.removeAll()
     }
     
     public func setMapStyle(_ style: UniversalMapStyle) {
