@@ -20,6 +20,8 @@ public protocol MapProviderProtocol: NSObject {
     
     var markers: [String: any UniversalMapMarkerProtocol] { get }
     
+    var polylines: [String: UniversalMapPolyline] { get }
+    
     /// Update the camera position
     func updateCamera(to camera: UniversalMapCamera)
     
