@@ -10,11 +10,16 @@ import SwiftUI
 
 public struct MapTheme: Sendable {
     @MainActor
-    public static var colors: Colors = .init(iAction: Color("IAction"), iPrimary: Color("IPrimary"))
+    public static var colors: Colors = .init(
+        iAction: Color("IAction"),
+        iPrimary: Color("IPrimary"),
+        pinLabel: .white
+    )
     
     public struct Colors {
         public var iAction: Color
         public var iPrimary: Color
+        public var pinLabel: Color
     }
 }
 
@@ -27,6 +32,10 @@ extension Color {
     
     static var iPrimary: Color {
         MapTheme.colors.iPrimary
+    }
+    
+    static var pinLabel: Color {
+        MapTheme.colors.pinLabel
     }
 }
 

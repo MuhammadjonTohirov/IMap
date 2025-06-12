@@ -115,11 +115,11 @@ public struct PinView: View {
         VStack {
             Text(time)
                 .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(Color.pinLabel)
             
             Text(unit.uppercased())
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(Color.pinLabel)
         }
         .frame(height: 48)
     }
