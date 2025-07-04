@@ -108,7 +108,7 @@ public struct PinView: View {
     private var pinningOverlay: some View {
         Circle()
             .frame(width: 28, height: 28)
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Color.pinOverlayCircle)
     }
     
     private func waitingOverlay(time: String, unit: String) -> some View {

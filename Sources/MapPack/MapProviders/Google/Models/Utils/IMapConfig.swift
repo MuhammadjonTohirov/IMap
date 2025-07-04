@@ -13,13 +13,15 @@ public struct MapTheme: Sendable {
     public static var colors: Colors = .init(
         iAction: Color("IAction"),
         iPrimary: Color("IPrimary"),
-        pinLabel: .white
+        pinLabel: .white,
+        pinOverlayCircle: .white
     )
     
     public struct Colors {
         public var iAction: Color
         public var iPrimary: Color
         public var pinLabel: Color
+        public var pinOverlayCircle: Color = .white
     }
 }
 
@@ -36,6 +38,10 @@ extension Color {
     
     static var pinLabel: Color {
         MapTheme.colors.pinLabel
+    }
+    
+    static var pinOverlayCircle: Color {
+        MapTheme.colors.pinOverlayCircle
     }
 }
 
