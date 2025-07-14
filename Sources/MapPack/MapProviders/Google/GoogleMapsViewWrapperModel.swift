@@ -79,20 +79,20 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     }
     
     func onChangeColorScheme(_ scheme: ColorScheme) {
-        switch scheme {
-        case .dark:
-            self.polylines.forEach { line in
-                line.value.strokeColor = .white
-            }
-        case .light:
-            self.polylines.forEach { line in
-                line.value.strokeColor = .black
-            }
-        @unknown default:
-            self.polylines.forEach { line in
-                line.value.strokeColor = UIColor.systemBlue
-            }
-        }
+//        switch scheme {
+//        case .dark:
+//            self.polylines.forEach { line in
+//                line.value.strokeColor = .white
+//            }
+//        case .light:
+//            self.polylines.forEach { line in
+//                line.value.strokeColor = .black
+//            }
+//        @unknown default:
+//            self.polylines.forEach { line in
+//                line.value.strokeColor = UIColor.systemBlue
+//            }
+//        }
     }
 }
 
@@ -180,7 +180,7 @@ extension UniversalMapPolyline {
         let lineColor: UIColor = polyline.color
         
         gmsPolyline.accessibilityLabel = polyline.id
-        gmsPolyline.strokeColor = lineColor
+        gmsPolyline.strokeColor = lineColor.resolvedColor(with: .current)
         gmsPolyline.strokeWidth = polyline.width
         gmsPolyline.geodesic = polyline.geodesic
         
