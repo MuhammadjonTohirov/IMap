@@ -69,6 +69,7 @@ public struct UniversalMapView: View {
                 Capsule()
                     .foregroundStyle(.black)
             }
+            .clipShape(Capsule())
             .animation(.default, value: viewModel.addressInfo?.name)
     }
     
