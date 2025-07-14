@@ -15,10 +15,15 @@ struct GoogleMapView: View {
     var viewModel: GoogleMapsViewWrapperModel
     var options: GMSMapViewOptions
     
+    @Environment(\.colorScheme) var colorScheme
+    
     var body: some View {
         GoogleMapsViewWrapper(
             viewModel: viewModel,
             options: options
         )
+        .onChange(of: colorScheme) { newValue in
+            viewModel.onChangeColorScheme(colorScheme)
+        }
     }
 }

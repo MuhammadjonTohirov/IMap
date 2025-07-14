@@ -7,6 +7,7 @@
 
 import Foundation
 import GoogleMaps
+import SwiftUI
 
 public protocol UniversalMapInputProvider: AnyObject, Sendable {
     
@@ -74,6 +75,23 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
 
         UIView.animate(withDuration: 0.2) {
             self.mapView?.animate(toZoom: newZoom)
+        }
+    }
+    
+    func onChangeColorScheme(_ scheme: ColorScheme) {
+        switch scheme {
+        case .dark:
+            self.polylines.forEach { line in
+                line.value.strokeColor = .white
+            }
+        case .light:
+            self.polylines.forEach { line in
+                line.value.strokeColor = .black
+            }
+        @unknown default:
+            self.polylines.forEach { line in
+                line.value.strokeColor = UIColor.systemBlue
+            }
         }
     }
 }
@@ -161,15 +179,10 @@ extension UniversalMapPolyline {
         
         let lineColor: UIColor = polyline.color
         
-//        let style = GMSStrokeStyle.solidColor(lineColor)
         gmsPolyline.accessibilityLabel = polyline.id
         gmsPolyline.strokeColor = lineColor
         gmsPolyline.strokeWidth = polyline.width
         gmsPolyline.geodesic = polyline.geodesic
-        
-//        gmsPolyline.spans = [
-//            GMSStyleSpan(style: style)
-//        ]
         
         return gmsPolyline
     }
