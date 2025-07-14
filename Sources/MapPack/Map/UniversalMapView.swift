@@ -69,7 +69,7 @@ public struct UniversalMapView: View {
                 Capsule()
                     .foregroundStyle(.black)
             }
-            .animation(.easeInOut, value: viewModel.addressInfo?.name)
+            .animation(.default, value: viewModel.addressInfo?.name)
     }
     
     // MARK: - Public API for modifying the map
