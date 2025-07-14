@@ -161,15 +161,15 @@ extension UniversalMapPolyline {
         
         let lineColor: UIColor = polyline.color
         
-        let style = GMSStrokeStyle.solidColor(lineColor)
+//        let style = GMSStrokeStyle.solidColor(lineColor)
         gmsPolyline.accessibilityLabel = polyline.id
         gmsPolyline.strokeColor = lineColor
         gmsPolyline.strokeWidth = polyline.width
         gmsPolyline.geodesic = polyline.geodesic
         
-        gmsPolyline.spans = [
-            GMSStyleSpan(style: style)
-        ]
+//        gmsPolyline.spans = [
+//            GMSStyleSpan(style: style)
+//        ]
         
         return gmsPolyline
     }
