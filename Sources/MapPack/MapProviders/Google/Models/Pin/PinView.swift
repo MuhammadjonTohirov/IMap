@@ -97,7 +97,7 @@ public struct PinView: View {
             else if case .steady = vm.state {
                 Circle()
                     .frame(width: 28, height: 28)
-                    .scaleEffect(isScaleAnimating ? 0.9 : 1)
+                    .opacity(isScaleAnimating ? 0.5 : 1)
                     .animation(
                         .easeInOut(duration: 0.5)
                         .repeatForever(autoreverses: true),
