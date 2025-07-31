@@ -11,6 +11,7 @@ import SwiftUI
 public struct PinView: View {
     @ObservedObject var vm: PinViewModel// = .init()
     @State private var isPinAnimating: Bool = false
+    @State private var isScaleAnimating: Bool = false
     
     private var shift: CGFloat {
         if vm.state == .pinning {
@@ -35,6 +36,9 @@ public struct PinView: View {
     public var body: some View {
         innerBody
             .ignoresSafeArea(.keyboard, edges: .all)
+            .onAppear {
+                isScaleAnimating = true
+            }
     }
     
     var innerBody: some View {
@@ -89,9 +93,22 @@ public struct PinView: View {
             if case .waiting(let time, let unit) = vm.state {
                 waitingOverlay(time: time, unit: unit)
                     .opacity(1)
-            } else {
-                waitingOverlay(time: "", unit: "")
-                    .opacity(0)
+            }
+            else if case .steady = vm.state {
+                Circle()
+                    .frame(width: 28, height: 28)
+                    .scaleEffect(isScaleAnimating ? 0.9 : 1)
+                    .animation(
+                        .easeInOut(duration: 0.5)
+                        .repeatForever(autoreverses: true),
+                        value: isScaleAnimating
+                    )
+                    .foregroundStyle(Color.pinOverlayCircle)
+            }
+            else {
+                Circle()
+                    .frame(width: 28, height: 28)
+                    .foregroundStyle(Color.pinOverlayCircle)
             }
         }
     }

@@ -22,12 +22,15 @@ public enum PinState: Hashable, Equatable, Identifiable {
             return "pinning"
         case .searching:
             return "searching"
+        case .steady:
+            return "steady"
         }
     }
     
     case loading
     case pinning
     case waiting(time: String, unit: String)
+    case steady
     case initial
     case searching
 }
