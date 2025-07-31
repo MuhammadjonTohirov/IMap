@@ -36,8 +36,8 @@ public struct PinView: View {
     public var body: some View {
         innerBody
             .ignoresSafeArea(.keyboard, edges: .all)
-            .onAppear {
-                isScaleAnimating = true
+            .onChange(of: vm.state) { newValue in
+                isScaleAnimating = newValue == .steady
             }
     }
     
