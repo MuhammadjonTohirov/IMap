@@ -109,6 +109,7 @@ public struct PinView: View {
                 Circle()
                     .frame(width: 28, height: 28)
                     .foregroundStyle(Color.pinOverlayCircle)
+                    .opacity(0)
             }
         }
     }
