@@ -15,7 +15,7 @@ let package = Package(
     dependencies: [
         // ✅ Google Maps SDK via SPM
         .package(url: "https://github.com/googlemaps/ios-maps-sdk", from: "9.4.0"),
-        .package(url: "https://github.com/MuhammadjonTohirov/maplibre-navigation-ios", branch: "main")
+        .package(url: "https://github.com/maplibre/maplibre-navigation-ios", branch: "main")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.

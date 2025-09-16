@@ -18,9 +18,9 @@ public enum UniversalMapStyle {
     var mapLibreStyleURL: String {
         switch self {
         case .light:
-            return "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+            return "http://192.168.1.124:8000/static/map_styles/victoria.json"
         case .dark:
-            return "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+            return "http://192.168.1.124:8000/static/map_styles/victoria.json"
         }
     }
     
