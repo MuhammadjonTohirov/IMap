@@ -18,9 +18,9 @@ public enum UniversalMapStyle {
     var mapLibreStyleURL: String {
         switch self {
         case .light:
-            return "http://192.168.1.124:8000/static/map_styles/victoria.json"
+            return "https://pnorman.github.io/tilekiln-shortbread-demo/colorful.json"
         case .dark:
-            return "http://192.168.1.124:8000/static/map_styles/victoria.json"
+            return "https://pnorman.github.io/tilekiln-shortbread-demo/colorful.json"
         }
     }
     
