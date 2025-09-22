@@ -55,7 +55,7 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
     }
     
     public func mapViewDidBecomeIdle(_ mapView: MLNMapView) {
-        Logging.l("MapLibre idle \(mapView.centerCoordinate)")
+        // TODO: Do something required
     }
     
     public func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
