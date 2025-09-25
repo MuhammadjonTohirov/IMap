@@ -34,8 +34,8 @@ public struct GoogleMapsViewWrapper: UIViewControllerRepresentable, @unchecked S
     public func makeUIViewController(context: Context) -> GoogleMapViewController {
         let vc = GoogleMapViewController(option: options)
         vc.delegate = viewModel
-        vc.map.isBuildingsEnabled = true
-        vc.map.isIndoorEnabled = true
+        vc.map.isBuildingsEnabled = false
+        vc.map.isIndoorEnabled = false
         vc.map.isTrafficEnabled = false
         vc.map.settings.allowScrollGesturesDuringRotateOrZoom = false
         viewModel.set(map: vc.map)
