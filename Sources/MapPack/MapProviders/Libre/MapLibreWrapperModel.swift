@@ -155,7 +155,7 @@ extension MapLibreWrapperModel {
         guard let mapView = mapView else { return }
 
         for marker in markers.values {
-            if let annotation = mapView.annotations?.first(where: { ($0 as? MLNPointAnnotation)?.identifier == marker.id }) {
+            if let annotation = mapView.annotations?.first(where: { $0.identifier == marker.id }) {
                 mapView.removeAnnotation(annotation)
             }
         }
@@ -174,6 +174,12 @@ extension MapLibreWrapperModel {
 }
 
 extension MLNPointAnnotation {
+    var identifier: String {
+        "\(self.coordinate.latitude),\(self.coordinate.longitude)"
+    }
+}
+
+extension MLNAnnotation {
     var identifier: String {
         "\(self.coordinate.latitude),\(self.coordinate.longitude)"
     }
