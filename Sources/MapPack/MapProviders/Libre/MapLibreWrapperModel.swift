@@ -154,10 +154,8 @@ extension MapLibreWrapperModel {
     func clearAllMarkers() {
         guard let mapView = mapView else { return }
 
-        for marker in markers.values {
-            if let annotation = mapView.annotations?.first(where: { $0.identifier == marker.id }) {
-                mapView.removeAnnotation(annotation)
-            }
+        mapView.annotations?.forEach { annotation in
+            mapView.removeAnnotation(annotation)
         }
         
         markers.removeAll()
