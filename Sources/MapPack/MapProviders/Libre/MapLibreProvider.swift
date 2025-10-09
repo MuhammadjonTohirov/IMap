@@ -129,6 +129,11 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         debugPrint("map libre does not provide runtime buildings visability")
     }
     
+    public func setMaxMinZoomLevels(min: Double = 4, max: Double = 18) {
+        self.viewModel.mapView?.minimumZoomLevel = min
+        self.viewModel.mapView?.maximumZoomLevel = max
+    }
+    
     public func setUserTrackingMode(_ tracking: Bool) {
         self.userTrackingMode = tracking ? .followWithHeading : nil
         self.viewModel.mapView?.userTrackingMode = tracking ? .followWithHeading : .none

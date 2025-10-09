@@ -59,6 +59,8 @@ public protocol MapProviderProtocol: NSObject {
     
     func showBuildings(_ show: Bool)
     
+    func setMaxMinZoomLevels(min: Double, max: Double)
+    
     /// Enable or disable user tracking mode
     func setUserTrackingMode(_ tracking: Bool)
     

@@ -101,6 +101,10 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         viewModel.mapView?.isBuildingsEnabled = show
     }
     
+    public func setMaxMinZoomLevels(min: Double, max: Double) {
+        viewModel.mapView?.setMinZoom(Float(min), maxZoom: Float(max))
+    }
+    
     public func setUserTrackingMode(_ tracking: Bool) {
         // TODO: needs to implement if possible
     }
