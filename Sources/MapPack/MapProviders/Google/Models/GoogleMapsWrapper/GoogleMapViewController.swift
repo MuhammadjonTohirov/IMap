@@ -44,15 +44,10 @@ public class GoogleMapViewController: UIViewController {
     
     open override func viewDidAppear(_ animated: Bool) {
         self.view.addSubview(map)
-        map.settings.rotateGestures = true
-        map.settings.tiltGestures = false
         
         changeMapStyle(by: traitCollection.userInterfaceStyle)
         
         map.autoresizingMask = [.flexibleWidth, .flexibleHeight, .flexibleTopMargin, .flexibleBottomMargin]
-        map.isBuildingsEnabled = true
-        
-        map.isMyLocationEnabled = true
         
         map.animate(toViewingAngle: GMapStatics.viewAngle)
     }

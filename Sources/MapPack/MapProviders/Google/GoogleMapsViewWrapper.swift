@@ -38,6 +38,9 @@ public struct GoogleMapsViewWrapper: UIViewControllerRepresentable, @unchecked S
         vc.map.isIndoorEnabled = false
         vc.map.isTrafficEnabled = false
         vc.map.settings.allowScrollGesturesDuringRotateOrZoom = false
+        vc.map.settings.rotateGestures = true
+        vc.map.settings.tiltGestures = false
+        
         viewModel.set(map: vc.map)
         return vc
     }
