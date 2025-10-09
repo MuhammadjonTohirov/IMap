@@ -97,6 +97,10 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         viewModel.mapView?.isMyLocationEnabled = show
     }
     
+    public func showBuildings(_ show: Bool) {
+        viewModel.mapView?.isBuildingsEnabled = show
+    }
+    
     public func setUserTrackingMode(_ tracking: Bool) {
         // TODO: needs to implement if possible
     }

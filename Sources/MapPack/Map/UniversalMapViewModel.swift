@@ -90,13 +90,13 @@ public class UniversalMapViewModel: ObservableObject {
         
         if let input { self.set(input: input) }
     }
-    
+        
+    // MARK: - Public Methods
+
     public func set(input: any UniversalMapInputProvider) {
         mapProviderInstance.setInput(input: input)
     }
-    
-    // MARK: - Public Methods
-    
+
     /// Change the map provider type
     public func setMapProvider(_ provider: MapProvider, input: (any UniversalMapInputProvider)?) {
         // Only change if different
@@ -133,6 +133,10 @@ public class UniversalMapViewModel: ObservableObject {
     public func showUserLocation(_ show: Bool) {
         self.showUserLocation = show
         mapProviderInstance.showUserLocation(show)
+    }
+    
+    public func showBuildings(_ show: Bool) {
+        mapProviderInstance.showBuildings(show)
     }
     
     /// Enable or disable user tracking mode

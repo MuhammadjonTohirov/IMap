@@ -124,6 +124,11 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         self.viewModel.mapView?.showsUserLocation = show
     }
     
+    public func showBuildings(_ show: Bool) {
+        // map libre does not provide runtime buildings visability
+        debugPrint("map libre does not provide runtime buildings visability")
+    }
+    
     public func setUserTrackingMode(_ tracking: Bool) {
         self.userTrackingMode = tracking ? .followWithHeading : nil
         self.viewModel.mapView?.userTrackingMode = tracking ? .followWithHeading : .none

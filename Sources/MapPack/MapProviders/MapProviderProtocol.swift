@@ -57,6 +57,8 @@ public protocol MapProviderProtocol: NSObject {
     /// Show or hide the user's location
     func showUserLocation(_ show: Bool)
     
+    func showBuildings(_ show: Bool)
+    
     /// Enable or disable user tracking mode
     func setUserTrackingMode(_ tracking: Bool)
     
