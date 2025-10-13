@@ -16,7 +16,7 @@ public struct GMapStatics {
 
 public class GoogleMapViewController: UIViewController {
     private var options: GoogleMaps.GMSMapViewOptions
-    lazy var map = {
+    lazy var map: GMSMapView = {
         Logging.l("GMaps \(GMSServices.sdkLongVersion())")
         return GMSMapView.init(options: options)
     }()
