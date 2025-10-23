@@ -11,6 +11,21 @@ import SwiftUI
 import MapLibre
 import CoreLocation
 
+public struct MapLibreConfig {
+    public static var shared: MapLibreConfig = .init()
+    
+    public var darkStyleUrl: URL?
+    public var liteStyleUrl: URL?
+    
+    public init(
+        darkStyleUrl: URL? = .init(string: "https://pnorman.github.io/tilekiln-shortbread-demo/colorful.json"),
+        liteStyleUrl: URL? = .init(string: "https://pnorman.github.io/tilekiln-shortbread-demo/colorful.json")
+    ) {
+        self.darkStyleUrl = darkStyleUrl
+        self.liteStyleUrl = liteStyleUrl
+    }
+}
+
 /// Implementation of the map provider protocol for MapLibre
 public class MapLibreProvider: NSObject, MapProviderProtocol {
     public private(set) var viewModel = MapLibreWrapperModel()
@@ -56,9 +71,6 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         } else {
             mapView.camera = targetCamera
         }
-        
-//        
-//        self.viewModel.mapView?.camera = .init(lookingAtCenter: camera.center, acrossDistance: accrossDistance, pitch: camera.pitch, heading: camera.bearing)
     }
     
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
@@ -128,7 +140,7 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         // map libre does not provide runtime buildings visability
         debugPrint("map libre does not provide runtime buildings visability")
     }
-    
+     
     public func setMaxMinZoomLevels(min: Double = 4, max: Double = 18) {
         self.viewModel.mapView?.minimumZoomLevel = min
         self.viewModel.mapView?.maximumZoomLevel = max
