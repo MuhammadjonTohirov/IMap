@@ -59,7 +59,11 @@ public class UniversalMapViewModel: ObservableObject {
         
         return bottomOffset
     }
-    public private(set) weak var delegate: UniversalMapViewModelDelegate?
+    public private(set) weak var delegate: UniversalMapViewModelDelegate? {
+        didSet {
+            debugPrint("UniversalMapViewModel: Delegate set \(delegate)")
+        }
+    }
     public private(set) var pinModel: PinViewModel = .init()
     // Private properties
     public private(set) var mapProviderInstance: MapProviderProtocol
@@ -89,6 +93,10 @@ public class UniversalMapViewModel: ObservableObject {
         self.updateMapProviderConfiguration()
         
         if let input { self.set(input: input) }
+    }
+    
+    deinit {
+        debugPrint("UniversalMapViewModel: Deinit")
     }
         
     // MARK: - Public Methods
