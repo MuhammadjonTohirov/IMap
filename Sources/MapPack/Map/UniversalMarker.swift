@@ -86,6 +86,7 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
             view: self.view ?? UIView(),
             reuseIdentifier: self.reuseIdentifier
         )
+        new.rotation = self.rotation
         return new
     }
 }
