@@ -15,6 +15,7 @@ extension MapLibreWrapperModel {
         let annotation = self.markers[marker.id]
         UIView.animate(withDuration: 1, delay: 0, options: .curveLinear) {
             annotation?.updatePosition(coordinate: marker.coordinate, heading: marker.rotation)
+            annotation?.view?.transform = CGAffineTransform(rotationAngle: (.pi / 180) * CGFloat(marker.rotation))
         }
     }
 }
