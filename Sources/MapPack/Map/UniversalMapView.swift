@@ -70,7 +70,7 @@ public struct UniversalMapView: View {
                     .foregroundStyle(.black)
             }
             .clipShape(Capsule())
-            .animation(.default, value: viewModel.addressInfo?.name)
+            .animation(MapConfig.hasAddressChangeAnimation ? .default : nil, value: viewModel.addressInfo?.name)
     }
     
     // MARK: - Public API for modifying the map
