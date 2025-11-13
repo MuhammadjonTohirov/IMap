@@ -25,8 +25,12 @@ public struct MapTheme: Sendable {
     }
 }
 
-public struct MapConfig: Sendable {
-    public static var hasAddressChangeAnimation: Bool = true
+public protocol MapConfigProtocol: Sendable {
+    var hasAddressChangeAnimation: Bool { get set }
+}
+
+public struct MapConfig: MapConfigProtocol {
+    public var hasAddressChangeAnimation: Bool = true
 }
 
 

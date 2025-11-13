@@ -59,6 +59,9 @@ public class UniversalMapViewModel: ObservableObject {
         
         return bottomOffset
     }
+    
+    public private(set) var config: any MapConfigProtocol = MapConfig()
+    
     public private(set) weak var delegate: UniversalMapViewModelDelegate? {
         didSet {
             debugPrint("UniversalMapViewModel: Delegate set \(delegate)")
@@ -103,6 +106,10 @@ public class UniversalMapViewModel: ObservableObject {
 
     public func set(input: any UniversalMapInputProvider) {
         mapProviderInstance.setInput(input: input)
+    }
+    
+    public func set(config: any MapConfigProtocol) {
+        self.config = config
     }
 
     /// Change the map provider type
