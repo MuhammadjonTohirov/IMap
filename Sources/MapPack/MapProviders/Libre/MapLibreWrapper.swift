@@ -62,6 +62,8 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
     }
     
     public func updateUIView(_ uiView: MLNMapView, context: Context) {
+        uiView.delegate = viewModel
+
         if let camera = camera {
             uiView.setCamera(camera.camera, animated: camera.animate)
         }
