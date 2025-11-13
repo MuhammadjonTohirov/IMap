@@ -31,6 +31,10 @@ public protocol MapConfigProtocol: Sendable {
 
 public struct MapConfig: MapConfigProtocol {
     public var hasAddressChangeAnimation: Bool = true
+    
+    public init(hasAddressChangeAnimation: Bool = true) {
+        self.hasAddressChangeAnimation = hasAddressChangeAnimation
+    }
 }
 
 
