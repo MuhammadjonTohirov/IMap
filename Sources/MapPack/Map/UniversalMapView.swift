@@ -44,19 +44,6 @@ public struct UniversalMapView: View {
                 }
                 .ignoreSafeArea(if: self.viewModel.mapProvider == .mapLibre)
         }
-        .onChange(of: colorScheme) { newValue in
-            switch newValue {
-            case .dark:
-                viewModel.mapProviderInstance.setMapStyle(.dark)
-            case .light:
-                viewModel.mapProviderInstance.setMapStyle(.light)
-            @unknown default:
-                break
-            }
-        }
-        .onAppear {
-            viewModel.mapProviderInstance.setMapStyle(colorScheme == .dark ? .dark : .light)
-        }
     }
     
     private var addressView: some View {
@@ -88,7 +75,7 @@ public struct UniversalMapView: View {
     }
     
     /// Set the map style
-    public func mapStyle(_ style: UniversalMapStyle) -> Self {
+    public func mapStyle(_ style: any UniversalMapStyleProtocol) -> Self {
         viewModel.setMapStyle(style)
         return self
     }

@@ -43,7 +43,7 @@ public class UniversalMapViewModel: ObservableObject {
     // Published properties
     @Published public var mapProvider: MapProvider
     @Published public var camera: UniversalMapCamera?
-    @Published public var mapStyle: UniversalMapStyle = .light
+    @Published public var mapStyle: (any UniversalMapStyleProtocol)?
     @Published public var showUserLocation: Bool = true
     @Published public var userTrackingMode: Bool = false
     @Published public var edgeInsets = UniversalMapEdgeInsets()
@@ -139,7 +139,7 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     /// Set the map style
-    public func setMapStyle(_ style: UniversalMapStyle) {
+    public func setMapStyle(_ style: any UniversalMapStyleProtocol) {
         self.mapStyle = style
         mapProviderInstance.setMapStyle(style)
     }
@@ -293,6 +293,7 @@ public class UniversalMapViewModel: ObservableObject {
         }
         
         mapProviderInstance.setMapStyle(mapStyle)
+        
         mapProviderInstance.showUserLocation(showUserLocation)
         mapProviderInstance.setUserTrackingMode(userTrackingMode)
         mapProviderInstance.setEdgeInsets(edgeInsets)

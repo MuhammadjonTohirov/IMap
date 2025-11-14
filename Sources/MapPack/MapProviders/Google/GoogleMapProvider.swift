@@ -89,8 +89,8 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.polylines.removeAll()
     }
     
-    public func setMapStyle(_ style: UniversalMapStyle) {
-        self.viewModel.mapView?.mapStyle = try? .init(jsonString: style.googleMapStyle)
+    public func setMapStyle(_ style: (any UniversalMapStyleProtocol)?) {
+        self.viewModel.mapView?.mapStyle = try? .init(jsonString: (style ?? GoogleDarkMapStyle()).source)
     }
     
     public func showUserLocation(_ show: Bool) {

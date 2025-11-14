@@ -52,7 +52,7 @@ public protocol MapProviderProtocol: NSObject {
     func clearAllPolylines()
     
     /// Set the map style
-    func setMapStyle(_ style: UniversalMapStyle)
+    func setMapStyle(_ style: (any UniversalMapStyleProtocol)?)
     
     /// Show or hide the user's location
     func showUserLocation(_ show: Bool)

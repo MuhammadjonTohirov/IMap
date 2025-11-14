@@ -11,25 +11,16 @@ import SwiftUI
 import MapLibre
 import CoreLocation
 
-public struct MapLibreConfig {
-    public static var shared: MapLibreConfig = .init()
-    
-    public var darkStyleUrl: URL?
-    public var liteStyleUrl: URL?
-    
-    public init(
-        darkStyleUrl: URL? = .init(string: "https://pnorman.github.io/tilekiln-shortbread-demo/colorful.json"),
-        liteStyleUrl: URL? = .init(string: "https://pnorman.github.io/tilekiln-shortbread-demo/colorful.json")
-    ) {
-        self.darkStyleUrl = darkStyleUrl
-        self.liteStyleUrl = liteStyleUrl
+struct MapLibreMapStyle: UniversalMapStyleProtocol {
+    var source: String {
+        ""
     }
 }
 
 /// Implementation of the map provider protocol for MapLibre
 public class MapLibreProvider: NSObject, MapProviderProtocol {
     public private(set) var viewModel = MapLibreWrapperModel()
-    private var mapStyle: UniversalMapStyle = .light
+    private var mapStyle: (any UniversalMapStyleProtocol) = MapLibreMapStyle()
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?
     private var showsUserLocation: Bool = true
@@ -126,9 +117,9 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         polylines.removeAll()
     }
     
-    public func setMapStyle(_ style: UniversalMapStyle) {
-        self.mapStyle = style
-        self.viewModel.mapView?.styleURL = URL(string: style.mapLibreStyleURL)
+    public func setMapStyle(_ style: (any UniversalMapStyleProtocol)?) {
+        self.mapStyle = style ?? MapLibreMapStyle()
+        self.viewModel.mapView?.styleURL = URL(string: self.mapStyle.source)
     }
     
     public func showUserLocation(_ show: Bool) {
@@ -183,11 +174,12 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     }
     
     public func makeMapView() -> AnyView {
+        
         return AnyView(
             MLNMapViewWrapper(
                 viewModel: viewModel,
                 camera: mapCamera,
-                styleUrl: mapStyle.mapLibreStyleURL,
+                styleUrl: mapStyle.source,
                 inset: mapInsets,
                 trackingMode: userTrackingMode,
                 showsUserLocation: showsUserLocation
