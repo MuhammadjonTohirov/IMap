@@ -62,11 +62,7 @@ public class UniversalMapViewModel: ObservableObject {
     
     public private(set) var config: any MapConfigProtocol = MapConfig()
     
-    public private(set) weak var delegate: UniversalMapViewModelDelegate? {
-        didSet {
-            debugPrint("UniversalMapViewModel: Delegate set \(delegate)")
-        }
-    }
+    public private(set) weak var delegate: UniversalMapViewModelDelegate?
     public private(set) var pinModel: PinViewModel = .init()
     // Private properties
     public private(set) var mapProviderInstance: MapProviderProtocol
