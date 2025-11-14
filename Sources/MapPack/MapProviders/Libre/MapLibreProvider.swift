@@ -13,7 +13,7 @@ import CoreLocation
 
 struct MapLibreMapStyle: UniversalMapStyleProtocol {
     var source: String {
-        ""
+        "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
     }
 }
 
