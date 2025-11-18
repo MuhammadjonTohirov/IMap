@@ -1,7 +1,7 @@
 //
 //  MapLibreWrapper.swift
 //  LibreMap
-//
+//`
 //  Created by Muhammadjon Tohirov on 06/05/25.
 //
 // MapLibreWrapper.swift
@@ -12,6 +12,7 @@ import SwiftUI
 
 public struct MLNMapViewWrapper: UIViewRepresentable {
     @ObservedObject var viewModel: MapLibreWrapperModel
+    var delegate: MLNMapViewDelegate
     var camera: MapCamera?
     var styleUrl: String?
     var inset: MapEdgeInsets?
@@ -20,6 +21,7 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
     
     public init(
         viewModel: MapLibreWrapperModel,
+        delegate: MLNMapViewDelegate,
         camera: MapCamera? = nil,
         styleUrl: String? = nil,
         inset: MapEdgeInsets? = nil,
@@ -27,6 +29,7 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         showsUserLocation: Bool = true
     ) {
         self.viewModel = viewModel
+        self.delegate = delegate
         self.camera = camera
         self.styleUrl = styleUrl
         self.inset = inset
@@ -47,12 +50,13 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         view.showsUserLocation = showsUserLocation
         view.zoomLevel = viewModel.zoomLevel
         view.showsUserHeadingIndicator = true
-        view.delegate = viewModel
-        view.prefetchesTiles = true
+        view.prefetchesTiles = false
         view.isMultipleTouchEnabled = false
         view.tileCacheEnabled = true
         view.isPitchEnabled = false
-        view.isHapticFeedbackEnabled = false
+        view.isHapticFeedbackEnabled = true
+        view.delegate = delegate
+
         viewModel.set(mapView: view)
         viewModel.setupGestureLocker()
         view.anchorRotateOrZoomGesturesToCenterCoordinate = true
@@ -62,7 +66,7 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
     }
     
     public func updateUIView(_ uiView: MLNMapView, context: Context) {
-        uiView.delegate = viewModel
+        uiView.delegate = delegate
 
         if let camera = camera {
             uiView.setCamera(camera.camera, animated: camera.animate)

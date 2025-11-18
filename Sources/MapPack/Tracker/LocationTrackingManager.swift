@@ -200,7 +200,9 @@ extension LocationTrackingManager: CLLocationManagerDelegate {
         guard let location = locations.last else { return }
         
         // Use throttled updates for smoother performance
-        handleLocationUpdateThrottled(location)
+        Task { @MainActor in
+            handleLocationUpdateThrottled(location)
+        }
     }
     
     public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {

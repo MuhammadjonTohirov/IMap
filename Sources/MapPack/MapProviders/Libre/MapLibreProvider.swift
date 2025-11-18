@@ -18,7 +18,7 @@ struct MapLibreMapStyle: UniversalMapStyleProtocol {
 }
 
 /// Implementation of the map provider protocol for MapLibre
-public class MapLibreProvider: NSObject, MapProviderProtocol {
+public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     public private(set) var viewModel = MapLibreWrapperModel()
     private var mapStyle: (any UniversalMapStyleProtocol) = MapLibreMapStyle()
     private var mapCamera: MapCamera?
@@ -40,16 +40,25 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         super.init()
     }
     
+    @MainActor
     public func updateCamera(to camera: UniversalMapCamera) {
         guard let mapView = viewModel.mapView else { return }
+        
+        // Use the actual map view width in points; fall back to screen width if needed
+        let widthPoints = mapView.bounds.width > 0 ? mapView.bounds.width : UIScreen.main.bounds.width
         
         let acrossDistance = viewModel.metersAcrossAtZoomLevel(
             camera.zoom,
             latitude: camera.center.latitude,
-            screenWidthPoints: UIApplication.shared.screenFrame.width
+            screenWidthPoints: widthPoints
         )
         
-        let targetCamera = MLNMapCamera(lookingAtCenter: camera.center, acrossDistance: acrossDistance, pitch: camera.pitch, heading: camera.bearing)
+        let targetCamera = MLNMapCamera(
+            lookingAtCenter: camera.center,
+            acrossDistance: acrossDistance,
+            pitch: camera.pitch,
+            heading: camera.bearing
+        )
         
         if camera.animate {
             mapView.setCamera(
@@ -152,7 +161,11 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     }
     
     public func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool) {
-        viewModel.focusOnPolyline(id: id)
+        viewModel.focusOnPolyline(id: id, padding: padding, animated: animated)
+    }
+    
+    public func focusOnPolyline(id: String, animated: Bool) {
+        viewModel.focusOnPolyline(id: id, animated: animated)
     }
     
     public func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {
@@ -178,6 +191,7 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         return AnyView(
             MLNMapViewWrapper(
                 viewModel: viewModel,
+                delegate: viewModel,
                 camera: mapCamera,
                 styleUrl: mapStyle.source,
                 inset: mapInsets,
@@ -187,3 +201,4 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         )
     }
 }
+

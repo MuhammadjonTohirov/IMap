@@ -73,6 +73,8 @@ public protocol MapProviderProtocol: NSObject {
     /// Fit the map to show a specific polyline
     func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool)
     
+    func focusOnPolyline(id: String, animated: Bool)
+    
     func focusOn(coordinates: [CLLocationCoordinate2D], padding: CGFloat, animated: Bool)
     
     func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool)
@@ -92,5 +94,13 @@ public protocol MapProviderProtocol: NSObject {
 public extension MapProviderProtocol {
     func focusOn(coordinates: [CLLocationCoordinate2D], padding: CGFloat, animated: Bool) {
         self.focusOn(coordinates: coordinates, edges: .init(top: padding, left: padding, bottom: padding, right: padding), animated: animated)
+    }
+    
+    func focusOnPolyline(id: String, padding: UIEdgeInsets) {
+        
+    }
+    
+    func focusOnPolyline(id: String) {
+        
     }
 }

@@ -8,6 +8,7 @@ import CoreLocation
 // MARK: - Location Tracking Manager Enhancement for MapLibre
 extension LocationTrackingManager {
     /// Enhanced camera update specifically for smooth location tracking
+    @MainActor
     private func updateCameraForCurrentLocationSmooth(_ location: CLLocation) {
         guard case .currentLocation(let zoom) = trackingMode else { return }
         
@@ -33,6 +34,7 @@ extension LocationTrackingManager {
     }
     
     /// Enhanced camera update for marker tracking
+    @MainActor
     private func updateCameraForMarkerSmooth(_ markerId: String) {
         guard case .marker(let id, let zoom) = trackingMode,
               id == markerId,
@@ -61,6 +63,7 @@ extension LocationTrackingManager {
     }
     
     /// Override location update handling for smooth tracking
+    @MainActor
     public func handleLocationUpdateSmooth(_ location: CLLocation) {
         self.currentLocation = location
         
@@ -70,6 +73,7 @@ extension LocationTrackingManager {
     }
     
     /// Override marker update handling for smooth tracking
+    @MainActor
     public func handleMarkerUpdateSmooth(_ marker: any UniversalMapMarkerProtocol) {
         if case .marker(let id, _) = trackingMode, id == marker.id {
             updateCameraForMarkerSmooth(marker.id)
@@ -84,6 +88,7 @@ extension LocationTrackingManager {
     private static let locationUpdateThreshold: TimeInterval = 0.5 // Update every 0.5 seconds max
     
     /// Throttled location update to prevent too frequent camera changes
+    @MainActor
     public func handleLocationUpdateThrottled(_ location: CLLocation) {
         let now = Date()
         let timeSinceLastUpdate = now.timeIntervalSince(Self.lastLocationUpdate)

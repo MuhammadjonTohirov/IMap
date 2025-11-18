@@ -127,7 +127,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     
     /// `animate` will be ignored
     public func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool) {
-        viewModel.focusTo(polyline: id, edges: padding)
+        viewModel.focusTo(polyline: id, edges: padding, animate: animated)
+    }
+    
+    public func focusOnPolyline(id: String, animated: Bool) {
+        viewModel.focusTo(polyline: id, edges: .zero, animate: animated)
     }
     
     @MainActor

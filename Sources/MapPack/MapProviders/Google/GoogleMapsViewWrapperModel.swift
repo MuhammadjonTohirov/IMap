@@ -79,9 +79,14 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         refreshVisibleMarkers()
     }
     
-    func focusTo(polyline id: String, edges: UIEdgeInsets) {
+    func focusTo(polyline id: String, edges: UIEdgeInsets, animate: Bool = true) {
         guard let pline = self.polylines[id], let path = pline.path else { return }
-        mapView?.animate(with: GMSCameraUpdate.fit(.init(path: path), with: edges))
+        if animate {
+            mapView?.animate(with: GMSCameraUpdate.fit(.init(path: path), with: edges))
+        } else {
+            mapView?.moveCamera(.fit(.init(path: path), with: edges))
+        }
+        
         refreshVisibleMarkers()
     }
     
