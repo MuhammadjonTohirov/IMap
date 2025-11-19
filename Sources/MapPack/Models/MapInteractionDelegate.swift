@@ -25,6 +25,8 @@ public protocol MapInteractionDelegate: AnyObject {
     
     /// Called when the map is tapped (not on a marker)
     func mapDidTap(at coordinate: CLLocationCoordinate2D)
+    
+    func mapDidLoaded()
 }
 
 // Default implementation
@@ -34,4 +36,5 @@ public extension MapInteractionDelegate {
     func mapDidEndDragging(at location: CLLocation) {}
     func mapDidTapMarker(id: String) -> Bool { false }
     func mapDidTap(at coordinate: CLLocationCoordinate2D) {}
+    func mapDidLoaded() {}
 }

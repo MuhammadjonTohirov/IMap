@@ -17,6 +17,7 @@ public protocol UniversalMapViewModelDelegate: AnyObject {
     func mapDidEndDragging(map: MapProviderProtocol, at location: CLLocation)
     func mapDidTapMarker(map: MapProviderProtocol, id: String) -> Bool
     func mapDidTap(map: MapProviderProtocol, at coordinate: CLLocationCoordinate2D)
+    func mapDidLoaded(map: MapProviderProtocol)
 }
 
 // Default implementation
@@ -26,6 +27,7 @@ public extension UniversalMapViewModelDelegate {
     func mapDidEndDragging(map: MapProviderProtocol, at location: CLLocation) {}
     func mapDidTapMarker(map: MapProviderProtocol, id: String) -> Bool {false}
     func mapDidTap(map: MapProviderProtocol, at coordinate: CLLocationCoordinate2D) {}
+    func mapDidLoaded(map: MapProviderProtocol) {}
 }
 
 public struct AddressInfo {
@@ -328,5 +330,9 @@ extension UniversalMapViewModel: MapInteractionDelegate {
     
     public func mapDidTap(at coordinate: CLLocationCoordinate2D) {
         self.delegate?.mapDidTap(map: self.mapProviderInstance, at: coordinate)
+    }
+    
+    public func mapDidLoaded() {
+        self.delegate?.mapDidLoaded(map: self.mapProviderInstance)
     }
 }

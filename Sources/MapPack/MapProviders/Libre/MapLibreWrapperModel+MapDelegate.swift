@@ -82,4 +82,8 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
         Logging.l(tag: "MapLibre", "Annotation view created")
         return annotationView
     }
+    
+    public func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
+        self.interactionDelegate?.mapDidLoaded()
+    }
 }

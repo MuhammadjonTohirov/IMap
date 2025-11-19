@@ -194,6 +194,10 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
             self.interactionDelegate?.mapDidEndDragging(at: location)
         }
     }
+    
+    public func mapViewSnapshotReady(_ mapView: GMSMapView) {
+        self.interactionDelegate?.mapDidLoaded()
+    }
 }
 
 public extension GoogleMapsViewWrapperModel {
