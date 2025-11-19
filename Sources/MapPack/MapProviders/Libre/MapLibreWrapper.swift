@@ -57,8 +57,6 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         view.isHapticFeedbackEnabled = true
         view.delegate = delegate
         
-        viewModel.set(mapView: view)
-        viewModel.setupGestureLocker()
         view.anchorRotateOrZoomGesturesToCenterCoordinate = true
         view.attributionButton.isHidden = true
         view.logoView.isHidden = true
@@ -67,6 +65,9 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
     
     public func updateUIView(_ uiView: MLNMapView, context: Context) {
         uiView.delegate = delegate
+
+        viewModel.set(mapView: uiView)
+        viewModel.setupGestureLocker()
 
         if let camera = camera {
             uiView.setCamera(camera.camera, animated: camera.animate)
