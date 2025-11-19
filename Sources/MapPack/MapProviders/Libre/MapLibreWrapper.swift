@@ -64,24 +64,41 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
     }
     
     public func updateUIView(_ uiView: MLNMapView, context: Context) {
-        uiView.delegate = delegate
+        // Keep delegate assigned to the model (avoid losing it to other code paths)
+        if uiView.delegate !== delegate {
+            uiView.delegate = delegate
+        }
 
+        // Provide mapView to model and gesture setup
         viewModel.set(mapView: uiView)
         viewModel.setupGestureLocker()
 
-        if let camera = camera {
-            uiView.setCamera(camera.camera, animated: camera.animate)
-        }
-        
+        // Apply inset first so camera computation uses the final viewport
         if let inset = inset {
             uiView.setContentInset(inset.insets, animated: inset.animated, completionHandler: inset.onEnd)
         }
         
-        if let trackingMode = trackingMode {
+        // Apply tracking mode before camera to avoid overrides
+        if let trackingMode = trackingMode, uiView.userTrackingMode != trackingMode {
             uiView.userTrackingMode = trackingMode
         }
         
-        uiView.showsUserLocation = showsUserLocation
+        // User location visibility
+        if uiView.showsUserLocation != showsUserLocation {
+            uiView.showsUserLocation = showsUserLocation
+        }
+
+        // Apply initial camera last (if provided externally)
+        if let camera = camera {
+            uiView.setCamera(camera.camera, animated: camera.animate)
+        }
+        
+        // If we are already in a window, force a layout pass and try to drain pending camera actions
+        if uiView.window != nil {
+            uiView.setNeedsLayout()
+            uiView.layoutIfNeeded()
+            viewModel.drainPendingActionsIfReady()
+        }
     }
     
     public final class Coordinator: NSObject {
