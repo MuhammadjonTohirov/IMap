@@ -36,6 +36,50 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     let tempPolylineSourceID = "temp-polyline-source"
     let tempPolylineLayerID = "temp-polyline-layer"
     
+    // MARK: - Readiness management
+    
+    private var pendingCameraActions: [() -> Void] = []
+    private var boundsCheckCancellable: AnyCancellable?
+    
+    private var isViewSized: Bool {
+        guard let mapView = mapView else { return false }
+        return mapView.bounds.width > 0 && mapView.bounds.height > 0
+    }
+    
+    private func enqueueWhenReady(_ action: @escaping () -> Void) {
+        if isViewSized && isMapLoaded {
+            action()
+            return
+        }
+        pendingCameraActions.append(action)
+        scheduleReadinessChecks()
+    }
+    
+    private func scheduleReadinessChecks() {
+        DispatchQueue.main.async { [weak self] in
+            self?.drainPendingActionsIfReady()
+        }
+        
+        boundsCheckCancellable?.cancel()
+        let publisher = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
+        boundsCheckCancellable = publisher
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                if self.isViewSized && self.isMapLoaded {
+                    self.boundsCheckCancellable?.cancel()
+                    self.boundsCheckCancellable = nil
+                    self.drainPendingActionsIfReady()
+                }
+            }
+    }
+    
+    func drainPendingActionsIfReady() {
+        guard isViewSized && isMapLoaded else { return }
+        let actions = pendingCameraActions
+        pendingCameraActions.removeAll()
+        actions.forEach { $0() }
+    }
+    
     func set(inputProvider: any UniversalMapInputProvider) {
         guard let _ = inputProvider as? LibreMapsKeyProvider else { return }
         
@@ -43,47 +87,70 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     func set(mapView: MLNMapView?) {
         self.mapView = mapView
+        // Attempt to drain if the view is already sized and style may be loaded
+        scheduleReadinessChecks()
     }
     
     // MARK: - Custom Methods
     
     func centerMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
-        guard let mapView = mapView else { return }
-        let _zoom = (zoom ?? self.zoomLevel) / 1.036
-        let acrossDistance = metersAcrossAtZoomLevel(
-            _zoom,
-            latitude: coordinate.latitude,
-            screenWidthPoints: UIApplication.shared.screenFrame.width
-        )
+        let perform = { [weak self] in
+            guard let self = self, let mapView = self.mapView else { return }
+            let _zoom = (zoom ?? self.zoomLevel) / 1.036
+            
+            let widthPoints = mapView.bounds.width > 0 ? mapView.bounds.width : UIScreen.main.bounds.width
+            
+            let acrossDistance = self.metersAcrossAtZoomLevel(
+                _zoom,
+                latitude: coordinate.latitude,
+                screenWidthPoints: widthPoints
+            )
+            
+            let camera = MLNMapCamera(
+                lookingAtCenter: coordinate,
+                acrossDistance: acrossDistance,
+                pitch: 0,
+                heading: 0
+            )
+            mapView.setCamera(camera, animated: animated)
+        }
         
-        let camera = MLNMapCamera(
-            lookingAtCenter: coordinate,
-            acrossDistance: acrossDistance,
-            pitch: 0,
-            heading: 0
-        )
-
-        mapView.setCamera(camera, animated: animated)
+        if !isViewSized || !isMapLoaded {
+            enqueueWhenReady(perform)
+        } else {
+            perform()
+        }
     }
     
     func flyTo(coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
-        guard let mapView = mapView else { return }
-        let _zoom = (zoom ?? self.zoomLevel) / 1.036
-        let acrossDistance = metersAcrossAtZoomLevel(
-            _zoom,
-            latitude: coordinate.latitude,
-            screenWidthPoints: UIApplication.shared.screenFrame.width
-        )
-        let camera = MLNMapCamera(lookingAtCenter: coordinate,
-                                 acrossDistance: acrossDistance,
-                                 pitch: 0,
-                                 heading: 0)
-        
-        if let zoom = zoom {
-            mapView.zoomLevel = zoom
+        let perform = { [weak self] in
+            guard let self = self, let mapView = self.mapView else { return }
+            let _zoom = (zoom ?? self.zoomLevel) / 1.036
+            
+            let widthPoints = mapView.bounds.width > 0 ? mapView.bounds.width : UIScreen.main.bounds.width
+            
+            let acrossDistance = self.metersAcrossAtZoomLevel(
+                _zoom,
+                latitude: coordinate.latitude,
+                screenWidthPoints: widthPoints
+            )
+            let camera = MLNMapCamera(lookingAtCenter: coordinate,
+                                     acrossDistance: acrossDistance,
+                                     pitch: 0,
+                                     heading: 0)
+            
+            if let zoom = zoom {
+                mapView.zoomLevel = zoom
+            }
+            
+            mapView.setCamera(camera, animated: animated)
         }
         
-        mapView.setCamera(camera, animated: animated)
+        if !isViewSized || !isMapLoaded {
+            enqueueWhenReady(perform)
+        } else {
+            perform()
+        }
     }
     
     func set(mapDelegate: MapInteractionDelegate?) {

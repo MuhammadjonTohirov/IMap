@@ -84,6 +84,9 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
     }
     
     public func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
+        // Mark style as loaded and drain any pending camera operations
+        self.isMapLoaded = true
+        self.drainPendingActionsIfReady()
         self.interactionDelegate?.mapDidLoaded()
     }
 }
