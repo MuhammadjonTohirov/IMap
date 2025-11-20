@@ -56,7 +56,7 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         view.isPitchEnabled = false
         view.isHapticFeedbackEnabled = true
         view.delegate = delegate
-        
+        view.accessibilityLabel = "mapView"
         view.anchorRotateOrZoomGesturesToCenterCoordinate = true
         view.attributionButton.isHidden = true
         view.logoView.isHidden = true
@@ -68,16 +68,11 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         if uiView.delegate !== delegate {
             uiView.delegate = delegate
         }
-
+        
         // Provide mapView to model and gesture setup
         viewModel.set(mapView: uiView)
         viewModel.setupGestureLocker()
 
-        // Apply inset first so camera computation uses the final viewport
-        if let inset = inset {
-            uiView.setContentInset(inset.insets, animated: inset.animated, completionHandler: inset.onEnd)
-        }
-        
         // Apply tracking mode before camera to avoid overrides
         if let trackingMode = trackingMode, uiView.userTrackingMode != trackingMode {
             uiView.userTrackingMode = trackingMode
@@ -95,9 +90,14 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         
         // If we are already in a window, force a layout pass and try to drain pending camera actions
         if uiView.window != nil {
-            uiView.setNeedsLayout()
-            uiView.layoutIfNeeded()
+//            uiView.setNeedsLayout()
+//            uiView.layoutIfNeeded()
             viewModel.drainPendingActionsIfReady()
+        }
+        
+        // Apply inset first so camera computation uses the final viewport
+        if let inset = inset {
+            uiView.setContentInset(inset.insets, animated: inset.animated, completionHandler: inset.onEnd)
         }
     }
     

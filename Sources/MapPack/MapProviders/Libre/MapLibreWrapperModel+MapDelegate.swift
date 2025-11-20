@@ -11,6 +11,7 @@ import MapLibre
 // MARK: - MLNMapViewDelegate Methods
 
 extension MapLibreWrapperModel: MLNMapViewDelegate {
+    
     public func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
         Task { @MainActor in
             Logging.l("Map region did change animated: \(animated)")
@@ -85,6 +86,17 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
     
     public func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
         // Mark style as loaded and drain any pending camera operations
+        Logging.l(tag: "MapLibre", "Map style loaded")
+    }
+    
+    public func mapViewDidFinishRenderingMap(_ mapView: MLNMapView, fullyRendered: Bool) {
+        
+        Logging.l(tag: "MapLibre", "Map rendered")
+    }
+    
+    public func mapViewDidFinishLoadingMap(_ mapView: MLNMapView) {
+        Logging.l(tag: "MapLibre", "Map loaded")
+
         self.isMapLoaded = true
         self.drainPendingActionsIfReady()
         self.interactionDelegate?.mapDidLoaded()
