@@ -230,7 +230,9 @@ extension MapLibreWrapperModel {
     
     private func addMarkerToMap(_ marker: UniversalMarker) {
         guard let mapView = mapView else { return }
-        mapView.addAnnotation(marker)
+        mapView.addAnnotation(marker)        
+        marker.updatePosition(coordinate: marker.coordinate, heading: marker.rotation)
+        marker.view?.transform = CGAffineTransform(rotationAngle: (.pi / 180) * CGFloat(marker.rotation))
     }
     
     func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {
