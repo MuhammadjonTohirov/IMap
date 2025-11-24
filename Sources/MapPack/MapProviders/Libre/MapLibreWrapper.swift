@@ -60,6 +60,9 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         view.anchorRotateOrZoomGesturesToCenterCoordinate = true
         view.attributionButton.isHidden = true
         view.logoView.isHidden = true
+        if let inset = inset {
+            view.contentInset = inset.insets
+        }
         return view
     }
     
@@ -97,7 +100,12 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         
         // Apply inset first so camera computation uses the final viewport
         if let inset = inset {
-            uiView.setContentInset(inset.insets, animated: inset.animated, completionHandler: inset.onEnd)
+            if inset.animated {
+                uiView.setContentInset(inset.insets, animated: inset.animated, completionHandler: inset.onEnd)
+            } else  {
+                uiView.contentInset = inset.insets
+                inset.onEnd?()
+            }
         }
     }
     
