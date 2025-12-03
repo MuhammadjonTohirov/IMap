@@ -99,14 +99,14 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         }
         
         // Apply inset first so camera computation uses the final viewport
-        if let inset = inset {
-            if inset.animated {
-                uiView.setContentInset(inset.insets, animated: inset.animated, completionHandler: inset.onEnd)
-            } else  {
-                uiView.contentInset = inset.insets
-                inset.onEnd?()
-            }
-        }
+//        if let inset = inset {
+//            if inset.animated {
+//                uiView.setContentInset(inset.insets, animated: inset.animated, completionHandler: inset.onEnd)
+//            } else  {
+//                uiView.contentInset = inset.insets
+//                inset.onEnd?()
+//            }
+//        }
     }
     
     public final class Coordinator: NSObject {

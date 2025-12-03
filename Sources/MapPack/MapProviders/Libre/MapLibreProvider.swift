@@ -75,6 +75,12 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
         self.mapInsets = insets.toMapLibreEdgeInsets()
+        if insets.animated {
+            viewModel.mapView?.setContentInset(insets.insets, animated: insets.animated, completionHandler: insets.onEnd)
+        } else  {
+            viewModel.mapView?.contentInset = insets.insets
+            insets.onEnd?()
+        }
     }
     
     public func addMarker(_ marker: any UniversalMapMarkerProtocol) {
