@@ -26,12 +26,6 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
     
     public func mapView(_ mapView: MLNMapView, regionWillChangeWith reason: MLNCameraChangeReason, animated: Bool) {
         Task { @MainActor in
-            if reason == .programmatic {
-                self.interactionDelegate?.mapDidStartMoving()
-            } else {
-                self.interactionDelegate?.mapDidStartDragging()
-            }
-            
             switch reason {
             case .gesturePan, .gestureTilt, .gesturePinch, .gestureRotate, .gestureZoomIn, .gestureZoomOut:
                 self.interactionDelegate?.mapDidStartDragging()
