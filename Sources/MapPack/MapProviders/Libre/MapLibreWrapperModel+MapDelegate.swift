@@ -31,6 +31,13 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
             } else {
                 self.interactionDelegate?.mapDidStartDragging()
             }
+            
+            switch reason {
+            case .gesturePan, .gestureTilt, .gesturePinch, .gestureRotate, .gestureZoomIn, .gestureZoomOut:
+                self.interactionDelegate?.mapDidStartDragging()
+            default:
+                self.interactionDelegate?.mapDidStartMoving()
+            }
         }
     }
     
