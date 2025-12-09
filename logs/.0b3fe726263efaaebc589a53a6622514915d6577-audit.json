@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/Users/r/Documents/Development/Work/royal/yalla/IMap/logs/.0b3fe726263efaaebc589a53a6622514915d6577-audit.json",
+    "files": [
+        {
+            "date": 1765293219826,
+            "name": "/Users/r/Documents/Development/Work/royal/yalla/IMap/logs/mcp-puppeteer-2025-12-09.log",
+            "hash": "f71fa453ec6096b22894dce03e29d13926f3d34e74eeb8d387ca308728d35c02"
+        }
+    ],
+    "hashType": "sha256"
+}

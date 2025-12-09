@@ -143,8 +143,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func showBuildings(_ show: Bool) {
-        // map libre does not provide runtime buildings visability
-        debugPrint("map libre does not provide runtime buildings visability")
+        self.viewModel.toggleBuildings(visible: show)
     }
      
     public func setMaxMinZoomLevels(min: Double = 4, max: Double = 18) {

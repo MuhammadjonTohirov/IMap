@@ -13,6 +13,6 @@ public class MapLibreInput: UniversalMapInputProvider, @unchecked Sendable {
     
     public init(darkThemeUrl: URL? = nil, lightThemeUrl: URL? = nil) {
         self.darkThemeUrl = darkThemeUrl
-        self.darkThemeUrl = lightThemeUrl
+        self.lightThemeUrl = lightThemeUrl
     }
 }

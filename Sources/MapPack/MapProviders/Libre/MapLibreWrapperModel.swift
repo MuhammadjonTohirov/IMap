@@ -81,8 +81,8 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     }
     
     func set(inputProvider: any UniversalMapInputProvider) {
-        guard let _ = inputProvider as? LibreMapsKeyProvider else { return }
-        
+        // TODO: We do not have input provider support for now.
+        fatalError("Not implemented")
     }
     
     func set(mapView: MLNMapView?) {
@@ -157,24 +157,56 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         self.interactionDelegate = mapDelegate
     }
     
-    func setupGestureLocker() {
-        mapView?.gestureRecognizers?.forEach { gesture in
-            if gesture is UIPinchGestureRecognizer || gesture is UIRotationGestureRecognizer {
-                gesture.addTarget(self, action: #selector(lockPanDuringGesture(_:)))
-            }
+    func toggleBuildings(visible: Bool) {
+        guard let mapView = mapView, let style = mapView.style else { return }
+        let layerId = "3d-buildings"
+        
+        // If layer exists, just toggle visibility
+        if let layer = style.layer(withIdentifier: layerId) {
+            layer.isVisible = visible
+            return
         }
-    }
-    
-    @objc func lockPanDuringGesture(_ gesture: UIGestureRecognizer) {
-        switch gesture.state {
-        case .began:
-            mapView?.isScrollEnabled = false
-            mapView?.allowsScrolling = false
-        case .ended, .cancelled, .failed:
-            mapView?.isScrollEnabled = true
-            mapView?.allowsScrolling = true
-        default:
-            break
+        
+        guard visible else { return }
+        
+        // Try to find a suitable source
+        // We look for a source that likely contains building data (often named 'composite', 'openmaptiles', or just the first vector source)
+        var targetSource: MLNSource?
+        
+        if let source = style.source(withIdentifier: "composite") {
+            targetSource = source
+        } else if let source = style.source(withIdentifier: "openmaptiles") {
+            targetSource = source
+        } else {
+             // Fallback: find first vector source
+            targetSource = style.sources.first { $0 is MLNVectorTileSource }
+        }
+        
+        guard let source = targetSource else { return }
+        
+        let buildingLayer = MLNFillExtrusionStyleLayer(identifier: layerId, source: source)
+        buildingLayer.sourceLayerIdentifier = "building"
+        
+        // Filter: only extrude actual buildings, and maybe exclude "false" buildings if data requires
+        // 'extrude' is often a property in OMT
+        buildingLayer.predicate = NSPredicate(format: "extrude == 'true' OR height > 0")
+        
+        // Styling
+        buildingLayer.fillExtrusionColor = NSExpression(forConstantValue: UIColor.lightGray)
+        buildingLayer.fillExtrusionOpacity = NSExpression(forConstantValue: 0.6)
+        
+        // Height
+        // If 'height' property exists, use it. Otherwise 0.
+        buildingLayer.fillExtrusionHeight = NSExpression(format: "height")
+        
+        // Min zoom
+        buildingLayer.minimumZoomLevel = 15
+        
+        // Insert below labels if possible
+        if let symbolLayer = style.layers.first(where: { $0 is MLNSymbolStyleLayer }) {
+            style.insertLayer(buildingLayer, below: symbolLayer)
+        } else {
+            style.addLayer(buildingLayer)
         }
     }
     

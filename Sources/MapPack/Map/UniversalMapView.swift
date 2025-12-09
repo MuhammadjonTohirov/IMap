@@ -8,6 +8,7 @@
 // UniversalMap/UniversalMapView.swift
 import SwiftUI
 import CoreLocation
+import Combine
 
 /// The main SwiftUI map component that displays either Google Maps or MapLibre
 public struct UniversalMapView: View {
