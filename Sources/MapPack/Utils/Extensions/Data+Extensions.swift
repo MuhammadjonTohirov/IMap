@@ -15,7 +15,7 @@ extension Data {
     }
     
     func asJsonString() throws -> String? {
-        let jsonData = try? JSONSerialization.data(withJSONObject: asJson(), options: [.prettyPrinted, .sortedKeys])
+//        let jsonData = try? JSONSerialization.data(withJSONObject: asJson(), options: [.prettyPrinted, .sortedKeys])
         return String.init(data: self, encoding: .utf8)
     }
 }
