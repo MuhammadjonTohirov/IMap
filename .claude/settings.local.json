@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(xargs basename:*)",
+      "Bash(git -C /Users/r/Documents/Development/Work/royal/yalla/IMap log --oneline)",
+      "Bash(xcodebuild:*)",
+      "Bash(swift build:*)"
+    ]
+  }
+}

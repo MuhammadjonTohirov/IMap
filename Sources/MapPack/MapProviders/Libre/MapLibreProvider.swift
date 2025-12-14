@@ -134,6 +134,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     
     public func setMapStyle(_ style: (any UniversalMapStyleProtocol)?) {
         self.mapStyle = style ?? MapLibreMapStyle()
+        self.viewModel.resetStyleFallbackState()
         self.viewModel.mapView?.styleURL = URL(string: self.mapStyle.source)
     }
     
