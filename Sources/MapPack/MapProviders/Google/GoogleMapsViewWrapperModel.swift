@@ -32,6 +32,17 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     // Polylines currently on the map
     public private(set) var polylines: [String: GMSPolyline] = [:]
     
+    private var didAppear: Bool = false
+    
+    func onAppear() {
+        if didAppear {
+            return
+        }
+        
+        didAppear = true
+        self.interactionDelegate?.mapDidLoaded()
+    }
+    
     func set(map: GMSMapView) {
         self.mapView = map
         // Initial refresh to render visible markers if any exist in the data source
@@ -196,11 +207,11 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
     }
     
     public func mapViewDidFinishTileRendering(_ mapView: GMSMapView) {
-        self.interactionDelegate?.mapDidLoaded()
+        // TODO: Handle tile rendering
     }
     
     public func mapViewSnapshotReady(_ mapView: GMSMapView) {
-        
+        // TODO: Snapshot ready
     }
 }
 

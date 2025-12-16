@@ -25,5 +25,8 @@ struct GoogleMapView: View {
         .onChange(of: colorScheme) { newValue in
             viewModel.onChangeColorScheme(colorScheme)
         }
+        .onAppear {
+            self.viewModel.onAppear()
+        }
     }
 }
