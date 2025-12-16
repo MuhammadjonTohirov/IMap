@@ -29,8 +29,12 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     @Published var isMapLoaded: Bool = false
     // Map markers
     @Published var markers: [String: UniversalMarker] = [:]
-        
+
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
+
+    // Style fallback management
+    private(set) var hasAttemptedFallback: Bool = false
+    let fallbackStyleURL = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
 
     // Temporary source and layer IDs
     let tempPolylineSourceID = "temp-polyline-source"
@@ -40,6 +44,10 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     private var pendingCameraActions: [() -> Void] = []
     private var boundsCheckCancellable: AnyCancellable?
+    
+    func set(hasAttemptedFallback: Bool) {
+        self.hasAttemptedFallback = hasAttemptedFallback
+    }
     
     private var isViewSized: Bool {
         guard let mapView = mapView else { return false }
@@ -212,12 +220,12 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
         guard let mapView = self.mapView else { return }
-        
+
         let currentZoom = mapView.zoomLevel
         let targetZoom = Double(minLevel)
-        
+
         let newZoom = max(currentZoom - shift, targetZoom)
-        
+
         // Animate to a zoomed-out level
         mapView.setCamera(
             mapView.camera,
@@ -225,6 +233,10 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
             animationTimingFunction: CAMediaTimingFunction(name: .easeInEaseOut)
         )
         mapView.setZoomLevel(newZoom, animated: true)
+    }
+
+    func resetStyleFallbackState() {
+        hasAttemptedFallback = false
     }
 }
 

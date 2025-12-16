@@ -102,4 +102,20 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
         self.drainPendingActionsIfReady()
         self.interactionDelegate?.mapDidLoaded()
     }
+
+    public func mapViewDidFailLoadingMap(_ mapView: MLNMapView, withError error: Error) {
+        Logging.l(tag: "MapLibre", "Map failed to load with error: \(error.localizedDescription)")
+
+        // If we haven't tried the fallback yet, attempt to load the backup style
+        if !hasAttemptedFallback {
+            Logging.l(tag: "MapLibre", "Attempting fallback to CartoDB style")
+            set(hasAttemptedFallback: true)
+
+            if let fallbackURL = URL(string: fallbackStyleURL) {
+                mapView.styleURL = fallbackURL
+            }
+        } else {
+            Logging.l(tag: "MapLibre", "Fallback style also failed. Cannot load map.")
+        }
+    }
 }
