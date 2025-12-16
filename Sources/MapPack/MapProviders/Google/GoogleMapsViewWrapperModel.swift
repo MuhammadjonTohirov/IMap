@@ -195,8 +195,12 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
         }
     }
     
-    public func mapViewSnapshotReady(_ mapView: GMSMapView) {
+    public func mapViewDidFinishTileRendering(_ mapView: GMSMapView) {
         self.interactionDelegate?.mapDidLoaded()
+    }
+    
+    public func mapViewSnapshotReady(_ mapView: GMSMapView) {
+        
     }
 }
 
