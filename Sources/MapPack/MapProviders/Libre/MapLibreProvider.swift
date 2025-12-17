@@ -73,6 +73,11 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         }
     }
     
+    @MainActor
+    public func set(preferredRefreshRate: MapRefreshRate) {
+        self.viewModel.set(preferredRefreshRate: preferredRefreshRate)
+    }
+    
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
         self.mapInsets = insets.toMapLibreEdgeInsets()
         if insets.animated {

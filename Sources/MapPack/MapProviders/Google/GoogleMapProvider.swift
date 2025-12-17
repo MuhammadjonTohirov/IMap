@@ -45,6 +45,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         viewModel.mapView?.padding.bottom = insets.insets.bottom
     }
     
+    @MainActor
+    public func set(preferredRefreshRate: MapRefreshRate) {
+        self.viewModel.set(preferredRefreshRate: preferredRefreshRate)
+    }
+    
     public func addMarker(_ marker: any UniversalMapMarkerProtocol) {
         guard let marker = marker as? UniversalMarker else {
             return

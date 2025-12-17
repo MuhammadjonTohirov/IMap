@@ -99,15 +99,20 @@ public class UniversalMapViewModel: ObservableObject {
     deinit {
         debugPrint("UniversalMapViewModel: Deinit")
     }
-        
+    
     // MARK: - Public Methods
-
+    
     public func set(input: any UniversalMapInputProvider) {
         mapProviderInstance.setInput(input: input)
     }
     
     public func set(config: any MapConfigProtocol) {
         self.config = config
+    }
+    
+    @MainActor
+    public func set(preferredRefreshRate: MapRefreshRate) {
+        self.mapProviderInstance.set(preferredRefreshRate: preferredRefreshRate)
     }
 
     /// Change the map provider type

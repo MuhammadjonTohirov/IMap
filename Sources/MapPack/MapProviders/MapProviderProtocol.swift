@@ -28,6 +28,9 @@ public protocol MapProviderProtocol: NSObject {
     /// Set the map's edge insets
     func setEdgeInsets(_ insets: UniversalMapEdgeInsets)
     
+    /// set preferred refresh rate
+    func set(preferredRefreshRate: MapRefreshRate)
+    
     /// Add a marker to the map
     func addMarker(_ marker: any UniversalMapMarkerProtocol)
     

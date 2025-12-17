@@ -43,6 +43,11 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         self.interactionDelegate?.mapDidLoaded()
     }
     
+    @MainActor
+    func set(preferredRefreshRate: MapRefreshRate) {
+        self.mapView?.preferredFrameRate = preferredRefreshRate.google
+    }
+    
     func set(map: GMSMapView) {
         self.mapView = map
         // Initial refresh to render visible markers if any exist in the data source

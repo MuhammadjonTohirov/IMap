@@ -99,9 +99,15 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         scheduleReadinessChecks()
     }
     
+    @MainActor
+    func set(preferredRefreshRate: MapRefreshRate) {
+        self.mapView?.preferredFramesPerSecond = preferredRefreshRate.libre
+    }
+    
     // MARK: - Custom Methods
     
     func centerMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
+        
         let perform = { [weak self] in
             guard let self = self, let mapView = self.mapView else { return }
             let _zoom = (zoom ?? self.zoomLevel) / 1.036
