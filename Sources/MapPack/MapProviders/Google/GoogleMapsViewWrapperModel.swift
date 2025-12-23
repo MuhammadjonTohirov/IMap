@@ -25,7 +25,7 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     
     // Data source: all known markers (by id)
     // These are NOT necessarily on the map; this is the full set you own.
-    private(set) var allMarkers: [String: UniversalMarker] = [:]
+    public private(set) var allMarkers: [String: UniversalMarker] = [:]
     
     // Rendered markers currently on the map (by id)
     public private(set) var markers: [String: UniversalMarker] = [:]

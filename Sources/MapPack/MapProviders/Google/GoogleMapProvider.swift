@@ -23,7 +23,7 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public var markers: [String : any UniversalMapMarkerProtocol] {
-        viewModel.markers
+        viewModel.allMarkers
     }
     
     required public override init() {
