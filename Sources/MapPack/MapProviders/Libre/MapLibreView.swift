@@ -18,6 +18,9 @@ struct MapLibreMapView: View {
     var body: some View {
         MapLibreMapView(viewModel: viewModel)
         .onChange(of: colorScheme) { newValue in
+            viewModel.onChangeColorScheme(newValue)
+        }
+        .onAppear {
             viewModel.onChangeColorScheme(colorScheme)
         }
     }
