@@ -11,16 +11,19 @@ import SwiftUI
 import MapLibre
 import CoreLocation
 
-struct MapLibreMapStyle: UniversalMapStyleProtocol {
-    var source: String {
+public struct MapLibreLightStyle: UniversalMapStyleProtocol {
+    public var source: String {
         "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+    }
+    
+    public init() {
+        
     }
 }
 
 /// Implementation of the map provider protocol for MapLibre
 public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     public private(set) var viewModel = MapLibreWrapperModel()
-    private var mapStyle: (any UniversalMapStyleProtocol) = MapLibreMapStyle()
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?
     private var showsUserLocation: Bool = true
@@ -137,10 +140,21 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         polylines.removeAll()
     }
     
-    public func setMapStyle(_ style: (any UniversalMapStyleProtocol)?) {
-        self.mapStyle = style ?? MapLibreMapStyle()
-        self.viewModel.resetStyleFallbackState()
-        self.viewModel.mapView?.styleURL = URL(string: self.mapStyle.source)
+    @MainActor
+    public func setMapStyle(_ style: (any UniversalMapStyleProtocol)?, scheme: ColorScheme) {
+        if var config = viewModel.config {
+            switch scheme {
+            case .dark:
+                config.darkStyle = style?.source ?? config.darkStyle
+            default:
+                config.darkStyle = style?.source ?? config.lightStyle
+            }
+
+            self.viewModel.set(config: config)
+
+            self.viewModel.resetStyleFallbackState()
+            self.viewModel.mapView?.styleURL = URL(string: (scheme == .dark) ? config.darkStyle : config.lightStyle)
+        }
     }
     
     public func showUserLocation(_ show: Bool) {
@@ -183,8 +197,9 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         viewModel.focusOn(coordinates: coordinates, edges: edges, animated: animated)
     }
 
-    public func setInput(input: any UniversalMapInputProvider) {
-        self.viewModel.set(inputProvider: input)
+    @MainActor
+    public func setConfig(_ input: any UniversalMapConfigProtocol) {
+        self.viewModel.set(config: input)
     }
     
     @MainActor
@@ -204,7 +219,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
                 viewModel: viewModel,
                 delegate: viewModel,
                 camera: mapCamera,
-                styleUrl: mapStyle.source,
+                styleUrl: viewModel.config?.lightStyle,
                 inset: mapInsets,
                 trackingMode: userTrackingMode,
                 showsUserLocation: showsUserLocation

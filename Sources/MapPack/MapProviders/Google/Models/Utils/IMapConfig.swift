@@ -27,13 +27,16 @@ public struct MapTheme: Sendable {
 
 public protocol MapConfigProtocol: Sendable {
     var hasAddressChangeAnimation: Bool { get set }
+    var mapConfiguration: any UniversalMapConfigProtocol { get set}
 }
 
 public struct MapConfig: MapConfigProtocol {
     public var hasAddressChangeAnimation: Bool = true
+    public var mapConfiguration: any UniversalMapConfigProtocol
     
-    public init(hasAddressChangeAnimation: Bool = true) {
+    public init(config: UniversalMapConfigProtocol, hasAddressChangeAnimation: Bool = true) {
         self.hasAddressChangeAnimation = hasAddressChangeAnimation
+        self.mapConfiguration = config
     }
 }
 

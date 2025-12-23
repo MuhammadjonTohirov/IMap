@@ -55,7 +55,7 @@ public protocol MapProviderProtocol: NSObject {
     func clearAllPolylines()
     
     /// Set the map style
-    func setMapStyle(_ style: (any UniversalMapStyleProtocol)?)
+    func setMapStyle(_ style: (any UniversalMapStyleProtocol)?, scheme: ColorScheme)
     
     /// Show or hide the user's location
     func showUserLocation(_ show: Bool)
@@ -88,7 +88,7 @@ public protocol MapProviderProtocol: NSObject {
     /// Get the SwiftUI view for this map provider
     func makeMapView() -> AnyView
     
-    func setInput(input: any UniversalMapInputProvider)
+    func setConfig(_ config: any UniversalMapConfigProtocol)
     
     @MainActor
     func zoomOut(minLevel: Float, shift: Double)

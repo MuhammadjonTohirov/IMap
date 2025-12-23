@@ -23,7 +23,7 @@ public struct GoogleLightMapStyle: UniversalMapStyleProtocol {
 
 public struct GoogleDarkMapStyle: UniversalMapStyleProtocol {
     public var source: String {
-        GMapStyles.dark
+        GMapStyles.night
     }
     
     public init() {}

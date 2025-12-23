@@ -92,20 +92,8 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         
         // If we are already in a window, force a layout pass and try to drain pending camera actions
         if uiView.window != nil {
-//            uiView.setNeedsLayout()
-//            uiView.layoutIfNeeded()
             viewModel.drainPendingActionsIfReady()
         }
-        
-        // Apply inset first so camera computation uses the final viewport
-//        if let inset = inset {
-//            if inset.animated {
-//                uiView.setContentInset(inset.insets, animated: inset.animated, completionHandler: inset.onEnd)
-//            } else  {
-//                uiView.contentInset = inset.insets
-//                inset.onEnd?()
-//            }
-//        }
     }
     
     public final class Coordinator: NSObject {

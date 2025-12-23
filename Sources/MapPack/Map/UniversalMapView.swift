@@ -19,8 +19,8 @@ public struct UniversalMapView: View {
     var colorScheme: ColorScheme
     
     /// Initialize with a specific map provider (defaults to Google Maps)
-    public init(provider: MapProvider, input: (any UniversalMapInputProvider)?) {
-        self.viewModel = UniversalMapViewModel(mapProvider: provider, input: input)
+    public init(provider: MapProvider, config: any MapConfigProtocol) {
+        self.viewModel = UniversalMapViewModel(mapProvider: provider, config: config)
     }
     
     /// Initialize with an existing view model
@@ -64,8 +64,8 @@ public struct UniversalMapView: View {
     // MARK: - Public API for modifying the map
     
     /// Change the map provider
-    public func mapProvider(_ provider: MapProvider) -> Self {
-        viewModel.setMapProvider(provider, input: nil)
+    public func mapProvider(_ provider: MapProvider, config: any MapConfigProtocol) -> Self {
+        viewModel.setMapProvider(provider, config: config)
         return self
     }
     
@@ -76,8 +76,8 @@ public struct UniversalMapView: View {
     }
     
     /// Set the map style
-    public func mapStyle(_ style: any UniversalMapStyleProtocol) -> Self {
-        viewModel.setMapStyle(style)
+    public func mapStyle(_ style: any UniversalMapStyleProtocol, scheme: ColorScheme) -> Self {
+        viewModel.setMapStyle(style, scheme: scheme)
         return self
     }
     

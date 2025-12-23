@@ -45,8 +45,6 @@ public class GoogleMapViewController: UIViewController {
     open override func viewDidAppear(_ animated: Bool) {
         self.view.addSubview(map)
         
-        changeMapStyle(by: traitCollection.userInterfaceStyle)
-        
         map.autoresizingMask = [.flexibleWidth, .flexibleHeight, .flexibleTopMargin, .flexibleBottomMargin]
         
         map.animate(toViewingAngle: GMapStatics.viewAngle)
@@ -55,27 +53,6 @@ public class GoogleMapViewController: UIViewController {
     open override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         map.frame = view.bounds
-    }
-    
-    open override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        
-        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
-            changeMapStyle(by: traitCollection.userInterfaceStyle)
-        }
-    }
-    
-    private func changeMapStyle(by interface: UIUserInterfaceStyle) {
-        switch interface {
-        case .unspecified:
-            map.mapStyle = try! GMSMapStyle.init(jsonString: GMapStyles.default)
-        case .light:
-            map.mapStyle = try! GMSMapStyle.init(jsonString: GMapStyles.default)
-        case .dark:
-            map.mapStyle = try! GMSMapStyle.init(jsonString: GMapStyles.night)
-        @unknown default:
-            break
-        }
     }
     
     open func focus(toLocation location: CLLocation) {

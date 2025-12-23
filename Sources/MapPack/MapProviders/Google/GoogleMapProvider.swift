@@ -94,8 +94,20 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.polylines.removeAll()
     }
     
-    public func setMapStyle(_ style: (any UniversalMapStyleProtocol)?) {
-        self.viewModel.mapView?.mapStyle = try? .init(jsonString: (style ?? GoogleDarkMapStyle()).source)
+    @MainActor
+    public func setMapStyle(_ style: (any UniversalMapStyleProtocol)?, scheme: ColorScheme) {
+        if var config = self.viewModel.config { // this scope will help to replace existing map style with new one based on scheme
+            switch scheme {
+            case .light:
+                config.lightStyle = style?.source ?? config.lightStyle
+            default:
+                config.darkStyle = style?.source ?? config.darkStyle
+            }
+
+            self.viewModel.mapView?.mapStyle = try? .init(jsonString: scheme == .dark ? config.darkStyle : config.lightStyle)
+
+            self.viewModel.set(config: config)
+        }
     }
     
     public func showUserLocation(_ show: Bool) {
@@ -140,8 +152,8 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     @MainActor
-    public func setInput(input: any UniversalMapInputProvider) {
-        self.viewModel.set(inputProvider: input)
+    public func setConfig(_ config: any UniversalMapConfigProtocol) {
+        self.viewModel.set(config: config)
     }
     
     @MainActor

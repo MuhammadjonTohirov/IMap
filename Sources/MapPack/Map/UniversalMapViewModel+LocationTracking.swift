@@ -124,8 +124,8 @@ public extension UniversalMapViewModel {
     }
     
     /// Enhanced setMapProvider that updates tracking
-    func setMapProviderWithTracking(_ provider: MapProvider, input: (any UniversalMapInputProvider)?) {
-        setMapProvider(provider, input: input)
+    func setMapProviderWithTracking(_ provider: MapProvider, input: any MapConfigProtocol) {
+        setMapProvider(provider, config: input)
         updateLocationTrackingProvider()
     }
 }

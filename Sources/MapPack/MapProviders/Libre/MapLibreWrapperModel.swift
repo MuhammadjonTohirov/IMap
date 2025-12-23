@@ -11,7 +11,7 @@ import MapLibre
 import SwiftUI
 import Combine
 
-public protocol LibreMapsKeyProvider: UniversalMapInputProvider, AnyObject {
+public protocol LibreMapsKeyProvider: UniversalMapConfigProtocol, AnyObject {
     
 }
 
@@ -29,7 +29,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     @Published var isMapLoaded: Bool = false
     // Map markers
     @Published var markers: [String: UniversalMarker] = [:]
-
+    public var config: (any UniversalMapConfigProtocol)?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
 
     // Style fallback management
@@ -88,9 +88,18 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         actions.forEach { $0() }
     }
     
-    func set(inputProvider: any UniversalMapInputProvider) {
-        // TODO: We do not have input provider support for now.
-        fatalError("Not implemented")
+    func onChangeColorScheme(_ scheme: ColorScheme) {
+        switch scheme {
+        case .dark:
+            self.mapView?.styleURL = .init(string: self.config?.darkStyle ?? "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json")
+        default:
+            self.mapView?.styleURL = .init(string: self.config?.lightStyle ?? "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json")
+        }
+    }
+    
+    @MainActor
+    func set(config: any UniversalMapConfigProtocol) {
+        self.config = config
     }
     
     func set(mapView: MLNMapView?) {

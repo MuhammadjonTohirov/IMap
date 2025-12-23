@@ -45,7 +45,6 @@ public class UniversalMapViewModel: ObservableObject {
     // Published properties
     @Published public var mapProvider: MapProvider
     @Published public var camera: UniversalMapCamera?
-    @Published public var mapStyle: (any UniversalMapStyleProtocol)?
     @Published public var showUserLocation: Bool = true
     @Published public var userTrackingMode: Bool = false
     @Published public var edgeInsets = UniversalMapEdgeInsets()
@@ -62,7 +61,7 @@ public class UniversalMapViewModel: ObservableObject {
         return bottomOffset
     }
     
-    public private(set) var config: any MapConfigProtocol = MapConfig()
+    public private(set) var config: any MapConfigProtocol
     
     public private(set) weak var delegate: UniversalMapViewModelDelegate?
     public private(set) var pinModel: PinViewModel = .init()
@@ -83,31 +82,28 @@ public class UniversalMapViewModel: ObservableObject {
     // MARK: - Initialization
     
     /// Initialize with a specific map provider
-    public init(mapProvider: MapProvider, input: (any UniversalMapInputProvider)?) {
+    public init(mapProvider: MapProvider, config: any MapConfigProtocol) {
         self.mapProvider = mapProvider
         self.mapProviderInstance = MapProviderFactory.createMapProvider(type: mapProvider)
+        self.config = config
         
+        self.set(config: config)
+
         // Set up delegation
         self.mapProviderInstance.setInteractionDelegate(self)
         
+
         // Initialize the map provider with initial configuration
         self.updateMapProviderConfiguration()
-        
-        if let input { self.set(input: input) }
     }
     
     deinit {
         debugPrint("UniversalMapViewModel: Deinit")
     }
     
-    // MARK: - Public Methods
-    
-    public func set(input: any UniversalMapInputProvider) {
-        mapProviderInstance.setInput(input: input)
-    }
-    
     public func set(config: any MapConfigProtocol) {
         self.config = config
+        self.mapProviderInstance.setConfig(config.mapConfiguration)
     }
     
     @MainActor
@@ -116,7 +112,7 @@ public class UniversalMapViewModel: ObservableObject {
     }
 
     /// Change the map provider type
-    public func setMapProvider(_ provider: MapProvider, input: (any UniversalMapInputProvider)?) {
+    public func setMapProvider(_ provider: MapProvider, config: (any MapConfigProtocol)?) {
         // Only change if different
         guard provider != mapProvider else { return }
         
@@ -132,7 +128,9 @@ public class UniversalMapViewModel: ObservableObject {
         // Reapply current configuration to the new provider
         updateMapProviderConfiguration()
         
-        if let input { self.set(input: input) }
+        if let config {
+            set(config: config)
+        }
     }
     
     /// Update the camera position
@@ -142,9 +140,8 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     /// Set the map style
-    public func setMapStyle(_ style: any UniversalMapStyleProtocol) {
-        self.mapStyle = style
-        mapProviderInstance.setMapStyle(style)
+    public func setMapStyle(_ style: any UniversalMapStyleProtocol, scheme: ColorScheme) {
+        mapProviderInstance.setMapStyle(style, scheme: scheme)
     }
     
     /// Show or hide the user's location
@@ -294,8 +291,6 @@ public class UniversalMapViewModel: ObservableObject {
         if let camera = camera {
             mapProviderInstance.updateCamera(to: camera)
         }
-        
-        mapProviderInstance.setMapStyle(mapStyle)
         
         mapProviderInstance.showUserLocation(showUserLocation)
         mapProviderInstance.setUserTrackingMode(userTrackingMode)

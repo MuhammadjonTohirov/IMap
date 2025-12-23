@@ -9,11 +9,12 @@ import Foundation
 import GoogleMaps
 import SwiftUI
 
-public protocol UniversalMapInputProvider: AnyObject, Sendable {
-    
+public protocol UniversalMapConfigProtocol: Sendable {
+    var lightStyle: String {get set}
+    var darkStyle: String {get set}
 }
 
-public protocol GoogleMapsKeyProvider: UniversalMapInputProvider, AnyObject {
+public protocol GoogleMapsConfigProtocol: UniversalMapConfigProtocol {
     var accessKey: String { get }
 }
 
@@ -31,6 +32,8 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     
     // Polylines currently on the map
     public private(set) var polylines: [String: GMSPolyline] = [:]
+    
+    public private(set) var config: GoogleMapsConfigProtocol?
     
     private var didAppear: Bool = false
     
@@ -55,10 +58,10 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     }
     
     @MainActor
-    func set(inputProvider: any UniversalMapInputProvider) {
-        guard let inputProvider = inputProvider as? GoogleMapsKeyProvider else { return }
-        
-        GMSServicesConfig.setupAPIKey(inputProvider.accessKey)
+    func set(config: any UniversalMapConfigProtocol) {
+        guard let _config = config as? GoogleMapsConfigProtocol else { return }
+        self.config = _config
+        GMSServicesConfig.setupAPIKey(_config.accessKey)
     }
     
     func set(mapDelegate: MapInteractionDelegate?) {
@@ -135,6 +138,13 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
             self.polylines.forEach { line in
                 line.value.strokeColor = UIColor.systemBlue
             }
+        }
+        
+        switch scheme {
+        case .dark:
+            self.mapView?.mapStyle = try? .init(jsonString: self.config?.darkStyle ?? GoogleDarkMapStyle().source)
+        default:
+            self.mapView?.mapStyle = try? .init(jsonString: self.config?.lightStyle ?? GoogleLightMapStyle().source)
         }
     }
     
