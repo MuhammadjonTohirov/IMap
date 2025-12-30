@@ -90,6 +90,7 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         }
         
         let update = GMSCameraUpdate.fit(bounds, withPadding: padding)
+        
         if animated {
             mapView?.animate(with: update)
         } else {
