@@ -9,9 +9,10 @@
 import Foundation
 import SwiftUI
 import GoogleMaps
+import CoreLocation
 
 /// Implementation of the map provider protocol for Google Maps
-public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
+public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, CLLocationManagerDelegate {
     private var viewModel: GoogleMapsViewWrapperModel = .init()
     
     public private(set) var polylines: [String : UniversalMapPolyline] = [:]
@@ -24,6 +25,8 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     private var lastKnownLocation: CLLocation?
     private var accuracyCircle: GMSCircle?
     
+    private let locationManager = CLLocationManager()
+    
     public var currentLocation: CLLocation? {
         lastKnownLocation ?? self.viewModel.mapView?.myLocation
     }
@@ -34,6 +37,7 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     
     required public override init() {
         super.init()
+        locationManager.delegate = self
     }
     
     public func setUserLocationIcon(_ image: UIImage, scale: CGFloat) {
@@ -170,15 +174,18 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
             // Custom marker mode
             viewModel.mapView?.isMyLocationEnabled = false
             if show {
+                 locationManager.startUpdatingLocation()
                  // Trigger an update if we have a location
                  if let loc = currentLocation {
                      updateUserLocation(loc)
                  }
             } else {
+                 locationManager.stopUpdatingLocation()
                  viewModel.removeMarker(id: userLocationMarkerId)
                  accuracyCircle?.map = nil
             }
         } else {
+            locationManager.stopUpdatingLocation()
             viewModel.mapView?.isMyLocationEnabled = show
             if !show {
                 viewModel.removeMarker(id: userLocationMarkerId)
@@ -246,5 +253,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     @MainActor
     public func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
         self.viewModel.zoomOut(minLevel: minLevel, shift: shift)
+    }
+    
+    // MARK: - CLLocationManagerDelegate
+    public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        updateUserLocation(location)
     }
 }
