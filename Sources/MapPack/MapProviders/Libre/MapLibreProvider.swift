@@ -162,7 +162,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
             case .dark:
                 config.darkStyle = style?.source ?? config.darkStyle
             default:
-                config.darkStyle = style?.source ?? config.lightStyle
+                config.lightStyle = style?.source ?? config.lightStyle
             }
 
             self.viewModel.set(config: config)
