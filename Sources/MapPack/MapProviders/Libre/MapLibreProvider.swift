@@ -246,8 +246,8 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     public func makeMapView() -> AnyView {
         
         return AnyView(
-            MLNMapViewWrapper(
-                viewModel: viewModel,
+            MapLibreMapView(
+                viewModel: self.viewModel,
                 delegate: viewModel,
                 camera: mapCamera,
                 styleUrl: viewModel.config?.lightStyle,
