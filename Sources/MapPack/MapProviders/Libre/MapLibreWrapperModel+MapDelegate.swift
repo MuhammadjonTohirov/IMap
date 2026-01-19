@@ -62,6 +62,31 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
     
     public func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
         
+        if annotation is MLNUserLocation {
+            guard let image = userLocationImage else { return nil }
+            
+            let reuseId = "user-location-custom"
+            var view = mapView.dequeueReusableAnnotationView(withIdentifier: reuseId)
+            
+            if view == nil {
+                view = MLNUserLocationAnnotationView(annotation: annotation, reuseIdentifier: reuseId)
+                let imageView = UIImageView(image: image)
+                imageView.contentMode = .scaleAspectFit
+                imageView.frame = CGRect(x: 0, y: 0, width: image.size.width * userLocationIconScale, height: image.size.height * userLocationIconScale)
+                imageView.tag = 999
+                view?.addSubview(imageView)
+                view?.frame = imageView.frame
+            } else {
+                // Update image if needed or just ensure frame is correct
+                if let imageView = view?.viewWithTag(999) as? UIImageView {
+                    imageView.image = image
+                    imageView.frame = CGRect(x: 0, y: 0, width: image.size.width * userLocationIconScale, height: image.size.height * userLocationIconScale)
+                    view?.frame = imageView.frame
+                }
+            }
+            return view
+        }
+        
         guard let pointAnnotation = annotation as? UniversalMarker,
               let marker = markers[pointAnnotation.id] else {
             Logging.l(tag: "MapLibre", "No marker found for \(annotation)")

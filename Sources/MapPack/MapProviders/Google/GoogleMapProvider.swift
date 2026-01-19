@@ -17,9 +17,15 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     public private(set) var polylines: [String : UniversalMapPolyline] = [:]
     
     private var mapOptions = GMSMapViewOptions()
+    private var userLocationImage: UIImage?
+    private var userLocationIconScale: CGFloat = 1.0
+    private let userLocationMarkerId = "USER_LOCATION_MARKER"
+    private var shouldShowUserLocation: Bool = false
+    private var lastKnownLocation: CLLocation?
+    private var accuracyCircle: GMSCircle?
     
     public var currentLocation: CLLocation? {
-        self.viewModel.mapView?.myLocation
+        lastKnownLocation ?? self.viewModel.mapView?.myLocation
     }
     
     public var markers: [String : any UniversalMapMarkerProtocol] {
@@ -28,6 +34,53 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     
     required public override init() {
         super.init()
+    }
+    
+    public func setUserLocationIcon(_ image: UIImage, scale: CGFloat) {
+        self.userLocationImage = image
+        self.userLocationIconScale = scale
+        self.showUserLocation(self.shouldShowUserLocation)
+    }
+    
+    public func updateUserLocation(_ location: CLLocation) {
+        self.lastKnownLocation = location
+        
+        guard let icon = userLocationImage, shouldShowUserLocation else { 
+            accuracyCircle?.map = nil
+            return 
+        }
+        
+        // Update Marker
+        if viewModel.markers[userLocationMarkerId] == nil {
+             let imageView = UIImageView(image: icon)
+             imageView.contentMode = .scaleAspectFit
+             imageView.frame = CGRect(x: 0, y: 0, width: icon.size.width * userLocationIconScale, height: icon.size.height * userLocationIconScale)
+             
+             let m = UniversalMarker(id: userLocationMarkerId, coordinate: location.coordinate, view: imageView)
+             m.groundAnchor = CGPoint(x: 0.5, y: 0.5)
+             m.zIndex = 1000 // High zIndex
+             viewModel.addMarker(id: userLocationMarkerId, marker: m)
+        } else {
+             // Update position
+             let m = viewModel.allMarkers[userLocationMarkerId]
+             m?.set(coordinate: location.coordinate)
+             if let m = m {
+                 viewModel.updateMarker(m)
+             }
+        }
+        
+        // Update Accuracy Circle
+        if accuracyCircle == nil {
+            accuracyCircle = GMSCircle()
+            accuracyCircle?.fillColor = UIColor.systemBlue.withAlphaComponent(0.2)
+            accuracyCircle?.strokeColor = UIColor.systemBlue.withAlphaComponent(0.6)
+            accuracyCircle?.strokeWidth = 1
+            accuracyCircle?.zIndex = 999 // Just below the marker
+        }
+        
+        accuracyCircle?.position = location.coordinate
+        accuracyCircle?.radius = location.horizontalAccuracy
+        accuracyCircle?.map = viewModel.mapView
     }
     
     public func updateCamera(to camera: UniversalMapCamera) {
@@ -111,7 +164,27 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func showUserLocation(_ show: Bool) {
-        viewModel.mapView?.isMyLocationEnabled = show
+        self.shouldShowUserLocation = show
+        
+        if let _ = userLocationImage {
+            // Custom marker mode
+            viewModel.mapView?.isMyLocationEnabled = false
+            if show {
+                 // Trigger an update if we have a location
+                 if let loc = currentLocation {
+                     updateUserLocation(loc)
+                 }
+            } else {
+                 viewModel.removeMarker(id: userLocationMarkerId)
+                 accuracyCircle?.map = nil
+            }
+        } else {
+            viewModel.mapView?.isMyLocationEnabled = show
+            if !show {
+                viewModel.removeMarker(id: userLocationMarkerId)
+                accuracyCircle?.map = nil
+            }
+        }
     }
     
     public func showBuildings(_ show: Bool) {

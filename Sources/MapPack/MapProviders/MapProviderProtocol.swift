@@ -92,6 +92,10 @@ public protocol MapProviderProtocol: NSObject {
     
     @MainActor
     func zoomOut(minLevel: Float, shift: Double)
+    
+    func setUserLocationIcon(_ image: UIImage, scale: CGFloat)
+    
+    func updateUserLocation(_ location: CLLocation)
 }
 
 public extension MapProviderProtocol {
@@ -106,4 +110,8 @@ public extension MapProviderProtocol {
     func focusOnPolyline(id: String) {
         
     }
+    
+    func setUserLocationIcon(_ image: UIImage, scale: CGFloat) {}
+    
+    func updateUserLocation(_ location: CLLocation) {}
 }

@@ -279,6 +279,11 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     @MainActor
+    public func set(userLocationIcon: UIImage, scale: CGFloat = 1.0) {
+        mapProviderInstance.setUserLocationIcon(userLocationIcon, scale: scale)
+    }
+    
+    @MainActor
     public func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
         mapProviderInstance.zoomOut(minLevel: minLevel, shift: shift)
     }

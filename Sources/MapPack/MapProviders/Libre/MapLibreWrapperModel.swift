@@ -10,6 +10,7 @@ import Foundation
 import MapLibre
 import SwiftUI
 import Combine
+import UIKit
 
 public protocol LibreMapsKeyProvider: UniversalMapConfigProtocol, AnyObject {
     
@@ -29,6 +30,11 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     @Published var isMapLoaded: Bool = false
     // Map markers
     @Published var markers: [String: UniversalMarker] = [:]
+    
+    // User Location Customization
+    public var userLocationImage: UIImage?
+    public var userLocationIconScale: CGFloat = 1.0
+    
     public var config: (any UniversalMapConfigProtocol)?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
 
@@ -39,6 +45,10 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     // Temporary source and layer IDs
     let tempPolylineSourceID = "temp-polyline-source"
     let tempPolylineLayerID = "temp-polyline-layer"
+    
+    // User Location Accuracy Layer
+    let userAccuracySourceID = "user-accuracy-source"
+    let userAccuracyLayerID = "user-accuracy-layer"
     
     // MARK: - Readiness management
     
@@ -252,6 +262,66 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
 
     func resetStyleFallbackState() {
         hasAttemptedFallback = false
+    }
+    
+    func updateUserLocation(_ location: CLLocation) {
+        self.userLocation = location
+        guard let style = mapView?.style else { return }
+        
+        // Ensure source exists
+        var source = style.source(withIdentifier: userAccuracySourceID) as? MLNShapeSource
+        if source == nil {
+            let newSource = MLNShapeSource(identifier: userAccuracySourceID, shape: nil, options: nil)
+            style.addSource(newSource)
+            source = newSource
+        }
+        
+        // Ensure layer exists
+        if style.layer(withIdentifier: userAccuracyLayerID) == nil {
+            let layer = MLNFillStyleLayer(identifier: userAccuracyLayerID, source: source!)
+            layer.fillColor = NSExpression(forConstantValue: UIColor.systemBlue.withAlphaComponent(0.2))
+            layer.fillOutlineColor = NSExpression(forConstantValue: UIColor.systemBlue.withAlphaComponent(0.6))
+            
+            // Insert below markers (annotations are usually on top, but check layers)
+            // Ideally put it below symbol layers
+            if let symbolLayer = style.layers.reversed().first(where: { $0 is MLNSymbolStyleLayer }) {
+                style.insertLayer(layer, below: symbolLayer)
+            } else {
+                style.addLayer(layer)
+            }
+        }
+        
+        // Update shape
+        // 64 points for smoothness
+        let shape = polygonCircleFor(coordinate: location.coordinate, meterRadius: location.horizontalAccuracy)
+        source?.shape = shape
+    }
+    
+    private func polygonCircleFor(coordinate: CLLocationCoordinate2D, meterRadius: Double) -> MLNPolygonFeature {
+        let degreesBetweenPoints = 360.0 / 64.0
+        // Earth's radius in meters
+        let earthRadius: Double = 6378137.0
+        
+        var coordinates: [CLLocationCoordinate2D] = []
+        
+        let latRadians = coordinate.latitude * .pi / 180.0
+        let lonRadians = coordinate.longitude * .pi / 180.0
+        let distRadians = meterRadius / earthRadius
+        
+        for i in 0...64 {
+            let degree = Double(i) * degreesBetweenPoints
+            let bearingRadians = degree * .pi / 180.0
+            
+            let newLatRadians = asin(sin(latRadians) * cos(distRadians) + cos(latRadians) * sin(distRadians) * cos(bearingRadians))
+            let newLonRadians = lonRadians + atan2(sin(bearingRadians) * sin(distRadians) * cos(latRadians), cos(distRadians) - sin(latRadians) * sin(newLatRadians))
+            
+            let newLat = newLatRadians * 180.0 / .pi
+            let newLon = newLonRadians * 180.0 / .pi
+            
+            coordinates.append(CLLocationCoordinate2D(latitude: newLat, longitude: newLon))
+        }
+        
+        return MLNPolygonFeature(coordinates: &coordinates, count: UInt(coordinates.count))
     }
 }
 

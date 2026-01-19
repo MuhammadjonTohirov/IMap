@@ -180,6 +180,7 @@ extension LocationTrackingManager: LocationTrackingProtocol {
     
     public func handleLocationUpdate(_ location: CLLocation) {
         self.currentLocation = location
+        mapProvider?.updateUserLocation(location)
         
         if case .currentLocation = trackingMode {
             updateCameraForCurrentLocation(location)
