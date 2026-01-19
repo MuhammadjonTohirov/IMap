@@ -11,6 +11,83 @@ import SwiftUI
 import GoogleMaps
 import CoreLocation
 
+class UserLocationMarkerView: UIView {
+    private let iconView: UIImageView
+    private let circleView: UIView
+    private var iconSize: CGSize
+    
+    // State
+    private var lastAccuracy: CLLocationAccuracy = 0
+    private var lastLatitude: CLLocationDegrees = 0
+    
+    init(icon: UIImage, scale: CGFloat) {
+        self.iconSize = CGSize(width: icon.size.width * scale, height: icon.size.height * scale)
+        self.iconView = UIImageView(image: icon)
+        self.circleView = UIView()
+        super.init(frame: .init(origin: .zero, size: iconSize))
+        
+        setupViews()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupViews() {
+        // Circle setup
+        circleView.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.2)
+        circleView.layer.borderColor = UIColor.systemBlue.withAlphaComponent(0.6).cgColor
+        circleView.layer.borderWidth = 1
+        circleView.isUserInteractionEnabled = false
+        addSubview(circleView)
+        
+        // Icon setup
+        iconView.contentMode = .scaleAspectFit
+        iconView.frame = CGRect(origin: .zero, size: iconSize)
+        addSubview(iconView)
+        
+        // Center icon initially
+        iconView.center = center
+    }
+    
+    func update(accuracy: CLLocationAccuracy, zoom: Float, latitude: CLLocationDegrees) {
+        self.lastAccuracy = accuracy
+        self.lastLatitude = latitude
+        updateLayout(zoom: zoom)
+    }
+    
+    func updateZoom(_ zoom: Float) {
+        updateLayout(zoom: zoom)
+    }
+    
+    private func updateLayout(zoom: Float) {
+        // Calculate radius in points
+        let metersPerPoint = 156543.03392 * cos(lastLatitude * .pi / 180) / pow(2, Double(zoom))
+        let radiusPoints = CGFloat(lastAccuracy / metersPerPoint)
+        
+        // Diameter
+        let diameter = radiusPoints * 2
+        
+        // Ensure container is large enough
+        let maxSize = max(diameter, max(iconSize.width, iconSize.height))
+        let newFrame = CGRect(x: 0, y: 0, width: maxSize, height: maxSize)
+        
+        // Only update if frame changed significantly
+        if abs(newFrame.width - self.frame.width) > 0.5 {
+            self.frame = newFrame
+            self.iconView.center = CGPoint(x: maxSize / 2, y: maxSize / 2)
+        }
+        
+        // Update circle
+        let circleFrame = CGRect(x: (maxSize - diameter) / 2, y: (maxSize - diameter) / 2, width: diameter, height: diameter)
+        
+        if circleView.frame != circleFrame {
+             circleView.frame = circleFrame
+             circleView.layer.cornerRadius = diameter / 2
+        }
+    }
+}
+
 /// Implementation of the map provider protocol for Google Maps
 public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, CLLocationManagerDelegate {
     private var viewModel: GoogleMapsViewWrapperModel = .init()
@@ -23,7 +100,6 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     private let userLocationMarkerId = "USER_LOCATION_MARKER"
     private var shouldShowUserLocation: Bool = false
     private var lastKnownLocation: CLLocation?
-    private var accuracyCircle: GMSCircle?
     
     private let locationManager = CLLocationManager()
     
@@ -50,41 +126,39 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         self.lastKnownLocation = location
         
         guard let icon = userLocationImage, shouldShowUserLocation else { 
-            accuracyCircle?.map = nil
             return 
         }
         
         // Update Marker
         if viewModel.markers[userLocationMarkerId] == nil {
-             let imageView = UIImageView(image: icon)
-             imageView.contentMode = .scaleAspectFit
-             imageView.frame = CGRect(x: 0, y: 0, width: icon.size.width * userLocationIconScale, height: icon.size.height * userLocationIconScale)
+             // We will implement the custom view logic in the ViewModel or here
+             // For now, let's just pass the icon and accuracy to the view model helper
+             // But first, we need to update the ViewModel to handle this "Circle View" logic.
+             // I'll keep the basic marker creation here for a moment, but it will change.
              
-             let m = UniversalMarker(id: userLocationMarkerId, coordinate: location.coordinate, view: imageView)
+             let container = UserLocationMarkerView(icon: icon, scale: userLocationIconScale)
+             
+             let m = UniversalMarker(id: userLocationMarkerId, coordinate: location.coordinate, view: container)
              m.groundAnchor = CGPoint(x: 0.5, y: 0.5)
              m.zIndex = 1000 // High zIndex
+             m.tracksViewChanges = true // Essential for animation
              viewModel.addMarker(id: userLocationMarkerId, marker: m)
+             
+             // Initial update
+             container.update(accuracy: location.horizontalAccuracy, zoom: viewModel.mapView?.camera.zoom ?? 15, latitude: location.coordinate.latitude)
         } else {
              // Update position
              let m = viewModel.allMarkers[userLocationMarkerId]
              m?.set(coordinate: location.coordinate)
+             
+             if let container = m?.iconView as? UserLocationMarkerView {
+                 container.update(accuracy: location.horizontalAccuracy, zoom: viewModel.mapView?.camera.zoom ?? 15, latitude: location.coordinate.latitude)
+             }
+             
              if let m = m {
                  viewModel.updateMarker(m)
              }
         }
-        
-        // Update Accuracy Circle
-        if accuracyCircle == nil {
-            accuracyCircle = GMSCircle()
-            accuracyCircle?.fillColor = UIColor.systemBlue.withAlphaComponent(0.2)
-            accuracyCircle?.strokeColor = UIColor.systemBlue.withAlphaComponent(0.6)
-            accuracyCircle?.strokeWidth = 1
-            accuracyCircle?.zIndex = 999 // Just below the marker
-        }
-        
-        accuracyCircle?.position = location.coordinate
-        accuracyCircle?.radius = location.horizontalAccuracy
-        accuracyCircle?.map = viewModel.mapView
     }
     
     public func updateCamera(to camera: UniversalMapCamera) {
@@ -182,14 +256,12 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
             } else {
                  locationManager.stopUpdatingLocation()
                  viewModel.removeMarker(id: userLocationMarkerId)
-                 accuracyCircle?.map = nil
             }
         } else {
             locationManager.stopUpdatingLocation()
             viewModel.mapView?.isMyLocationEnabled = show
             if !show {
                 viewModel.removeMarker(id: userLocationMarkerId)
-                accuracyCircle?.map = nil
             }
         }
     }

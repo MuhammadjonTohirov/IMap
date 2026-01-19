@@ -7,10 +7,101 @@
 
 import Foundation
 import MapLibre
+import UIKit
+
+class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
+    private let circleView = UIView()
+    private var iconView: UIImageView?
+    private var iconSize: CGSize = .zero
+    
+    private var lastAccuracy: CLLocationAccuracy = 0
+    private var lastLatitude: CLLocationDegrees = 0
+    
+    override init(annotation: MLNAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        setupViews()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupViews() {
+        clipsToBounds = false
+        circleView.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.2)
+        circleView.layer.borderColor = UIColor.systemBlue.withAlphaComponent(0.6).cgColor
+        circleView.layer.borderWidth = 1
+        circleView.isUserInteractionEnabled = false
+        addSubview(circleView)
+        sendSubviewToBack(circleView)
+    }
+    
+    func setup(image: UIImage, scale: CGFloat) {
+        if iconView == nil {
+            let iv = UIImageView(image: image)
+            iv.contentMode = .scaleAspectFit
+            addSubview(iv)
+            iconView = iv
+        } else {
+            iconView?.image = image
+        }
+        
+        self.iconSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        iconView?.frame = CGRect(origin: .zero, size: iconSize)
+        
+        // Initial layout
+        self.frame = iconView?.frame ?? .zero
+        iconView?.center = CGPoint(x: frame.width/2, y: frame.height/2)
+    }
+    
+    func update(accuracy: CLLocationAccuracy, zoom: Double, latitude: CLLocationDegrees) {
+        self.lastAccuracy = accuracy
+        self.lastLatitude = latitude
+        updateLayout(zoom: zoom)
+    }
+    
+    func updateZoom(_ zoom: Double) {
+        updateLayout(zoom: zoom)
+    }
+    
+    private func updateLayout(zoom: Double) {
+        // Calculate radius in points
+        // metersPerPoint = 40075016.686 * cos(lat * pi / 180) / (256 * 2^zoom)
+        // Simplified:
+        let metersPerPoint = 156543.03392 * cos(lastLatitude * .pi / 180) / pow(2, zoom)
+        let radiusPoints = CGFloat(lastAccuracy / metersPerPoint)
+        
+        // Diameter
+        let diameter = radiusPoints * 2
+        
+        // We do NOT resize self.frame (the annotation view itself) to avoid flickering.
+        // The view stays the size of the icon. The circle grows outside it (clipsToBounds = false).
+        
+        let center = CGPoint(x: self.bounds.midX, y: self.bounds.midY)
+        let circleFrame = CGRect(
+            x: center.x - diameter / 2,
+            y: center.y - diameter / 2,
+            width: diameter,
+            height: diameter
+        )
+        
+        if circleView.frame != circleFrame {
+             circleView.frame = circleFrame
+             circleView.layer.cornerRadius = diameter / 2
+        }
+    }
+}
 
 // MARK: - MLNMapViewDelegate Methods
 
 extension MapLibreWrapperModel: MLNMapViewDelegate {
+    
+    public func mapView(_ mapView: MLNMapView, regionIsChangingWith reason: MLNCameraChangeReason) {
+         if let userLocationAnnotation = mapView.userLocation,
+           let view = mapView.view(for: userLocationAnnotation) as? UniversalUserLocationAnnotationView {
+             view.updateZoom(mapView.zoomLevel)
+        }
+    }
     
     public func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
         Task { @MainActor in
@@ -60,30 +151,40 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
         // TODO: Do something required
     }
     
+    public func mapView(_ mapView: MLNMapView, didUpdate userLocation: MLNUserLocation?) {
+        guard let location = userLocation?.location,
+              let annotation = userLocation,
+              let view = mapView.view(for: annotation) as? UniversalUserLocationAnnotationView else {
+            return
+        }
+        
+        view.update(accuracy: location.horizontalAccuracy, zoom: mapView.zoomLevel, latitude: location.coordinate.latitude)
+        
+        // Propagate to interaction delegate if needed, though usually this is internal
+        // self.interactionDelegate?.userLocationDidUpdate(location) 
+    }
+    
     public func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
         
         if annotation is MLNUserLocation {
             guard let image = userLocationImage else { return nil }
             
             let reuseId = "user-location-custom"
-            var view = mapView.dequeueReusableAnnotationView(withIdentifier: reuseId)
+            
+            // Try to reuse
+            var view = mapView.dequeueReusableAnnotationView(withIdentifier: reuseId) as? UniversalUserLocationAnnotationView
             
             if view == nil {
-                view = MLNUserLocationAnnotationView(annotation: annotation, reuseIdentifier: reuseId)
-                let imageView = UIImageView(image: image)
-                imageView.contentMode = .scaleAspectFit
-                imageView.frame = CGRect(x: 0, y: 0, width: image.size.width * userLocationIconScale, height: image.size.height * userLocationIconScale)
-                imageView.tag = 999
-                view?.addSubview(imageView)
-                view?.frame = imageView.frame
-            } else {
-                // Update image if needed or just ensure frame is correct
-                if let imageView = view?.viewWithTag(999) as? UIImageView {
-                    imageView.image = image
-                    imageView.frame = CGRect(x: 0, y: 0, width: image.size.width * userLocationIconScale, height: image.size.height * userLocationIconScale)
-                    view?.frame = imageView.frame
-                }
+                view = UniversalUserLocationAnnotationView(annotation: annotation, reuseIdentifier: reuseId)
             }
+            
+            view?.setup(image: image, scale: userLocationIconScale)
+            
+            // Initial update if location is known
+            if let userLoc = annotation as? MLNUserLocation, let location = userLoc.location {
+                view?.update(accuracy: location.horizontalAccuracy, zoom: mapView.zoomLevel, latitude: location.coordinate.latitude)
+            }
+            
             return view
         }
         

@@ -222,6 +222,21 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
         }
     }
     
+    public func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
+        // Update UserLocationMarkerView if visible
+        // We know the ID is USER_LOCATION_MARKER, but the WrapperModel doesn't know that constant.
+        // We can iterate or just look for markers with that view type.
+        // Efficiency: If we have 1000 markers, iterating is bad.
+        // Ideally we should know which marker is the user location.
+        // But for now, let's look up by ID "USER_LOCATION_MARKER" if we can access that constant or just hardcode it
+        // OR better: check visible markers that have tracksViewChanges = true
+        
+        if let userMarker = markers["USER_LOCATION_MARKER"], 
+           let view = userMarker.iconView as? UserLocationMarkerView {
+            view.updateZoom(position.zoom)
+        }
+    }
+    
     public func mapViewDidFinishTileRendering(_ mapView: GMSMapView) {
         // TODO: Handle tile rendering
     }
