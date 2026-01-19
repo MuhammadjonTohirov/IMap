@@ -96,6 +96,8 @@ public protocol MapProviderProtocol: NSObject {
     func setUserLocationIcon(_ image: UIImage, scale: CGFloat)
     
     func updateUserLocation(_ location: CLLocation)
+    
+    func showUserLocationAccuracy(_ show: Bool)
 }
 
 public extension MapProviderProtocol {
@@ -114,4 +116,6 @@ public extension MapProviderProtocol {
     func setUserLocationIcon(_ image: UIImage, scale: CGFloat) {}
     
     func updateUserLocation(_ location: CLLocation) {}
+    
+    func showUserLocationAccuracy(_ show: Bool) {}
 }

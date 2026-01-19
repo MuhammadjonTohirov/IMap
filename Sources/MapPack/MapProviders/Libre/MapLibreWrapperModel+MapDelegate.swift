@@ -16,6 +16,7 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
     
     private var lastAccuracy: CLLocationAccuracy = 0
     private var lastLatitude: CLLocationDegrees = 0
+    private var isCircleHidden: Bool = false
     
     override init(annotation: MLNAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
@@ -54,6 +55,11 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
         iconView?.center = CGPoint(x: frame.width/2, y: frame.height/2)
     }
     
+    func setCircleHidden(_ hidden: Bool) {
+        self.isCircleHidden = hidden
+        self.circleView.isHidden = hidden
+    }
+    
     func update(accuracy: CLLocationAccuracy, zoom: Double, latitude: CLLocationDegrees) {
         self.lastAccuracy = accuracy
         self.lastLatitude = latitude
@@ -65,6 +71,8 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
     }
     
     private func updateLayout(zoom: Double) {
+        if isCircleHidden { return }
+        
         // Calculate radius in points
         // metersPerPoint = 40075016.686 * cos(lat * pi / 180) / (256 * 2^zoom)
         // Simplified:

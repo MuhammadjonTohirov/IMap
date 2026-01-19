@@ -19,6 +19,7 @@ class UserLocationMarkerView: UIView {
     // State
     private var lastAccuracy: CLLocationAccuracy = 0
     private var lastLatitude: CLLocationDegrees = 0
+    private var isCircleHidden: Bool = false
     
     init(icon: UIImage, scale: CGFloat) {
         self.iconSize = CGSize(width: icon.size.width * scale, height: icon.size.height * scale)
@@ -50,6 +51,11 @@ class UserLocationMarkerView: UIView {
         iconView.center = center
     }
     
+    func setCircleHidden(_ hidden: Bool) {
+        self.isCircleHidden = hidden
+        self.circleView.isHidden = hidden
+    }
+    
     func update(accuracy: CLLocationAccuracy, zoom: Float, latitude: CLLocationDegrees) {
         self.lastAccuracy = accuracy
         self.lastLatitude = latitude
@@ -61,6 +67,8 @@ class UserLocationMarkerView: UIView {
     }
     
     private func updateLayout(zoom: Float) {
+        if isCircleHidden { return }
+        
         // Calculate radius in points
         let metersPerPoint = 156543.03392 * cos(lastLatitude * .pi / 180) / pow(2, Double(zoom))
         let radiusPoints = CGFloat(lastAccuracy / metersPerPoint)
@@ -114,6 +122,17 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     required public override init() {
         super.init()
         locationManager.delegate = self
+    }
+    
+    public func showUserLocationAccuracy(_ show: Bool) {
+        if let userMarker = viewModel.markers[userLocationMarkerId],
+           let view = userMarker.iconView as? UserLocationMarkerView {
+            view.setCircleHidden(!show)
+            // Trigger layout update if showing
+            if show, let zoom = viewModel.mapView?.camera.zoom {
+                view.updateZoom(zoom)
+            }
+        }
     }
     
     public func setUserLocationIcon(_ image: UIImage, scale: CGFloat) {

@@ -191,6 +191,18 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.viewModel.mapView?.userTrackingMode = tracking ? .followWithHeading : .none
     }
     
+    public func showUserLocationAccuracy(_ show: Bool) {
+        if let mapView = viewModel.mapView,
+           let userLocationAnnotation = mapView.userLocation,
+           let view = mapView.view(for: userLocationAnnotation) as? UniversalUserLocationAnnotationView {
+            view.setCircleHidden(!show)
+            // Trigger layout update
+            if show {
+                view.updateZoom(mapView.zoomLevel)
+            }
+        }
+    }
+    
     public func setInteractionDelegate(_ delegate: MapInteractionDelegate?) {
         Logging.l("Set interaction delegate to \(String(describing: delegate))")
         self.viewModel.set(mapDelegate: delegate)

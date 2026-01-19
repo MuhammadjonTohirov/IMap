@@ -284,6 +284,11 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     @MainActor
+    public func showUserLocationAccuracy(_ show: Bool) {
+        mapProviderInstance.showUserLocationAccuracy(show)
+    }
+    
+    @MainActor
     public func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
         mapProviderInstance.zoomOut(minLevel: minLevel, shift: shift)
     }
