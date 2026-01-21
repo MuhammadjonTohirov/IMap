@@ -28,6 +28,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     @Published var mapCenter: CLLocationCoordinate2D?
     @Published var zoomLevel: Double = 15
     @Published var isMapLoaded: Bool = false
+    @Published var isBuildingsEnabled: Bool = false
     // Map markers
     @Published var markers: [String: UniversalMarker] = [:]
     
@@ -191,6 +192,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     }
     
     func toggleBuildings(visible: Bool) {
+        self.isBuildingsEnabled = visible
         guard let mapView = mapView, let style = mapView.style else { return }
         let layerId = "3d-buildings"
         
@@ -308,7 +310,7 @@ extension MapLibreWrapperModel {
         markers.removeAll()
     }
     
-    private func addMarkerToMap(_ marker: UniversalMarker) {
+    func addMarkerToMap(_ marker: UniversalMarker) {
         guard let mapView = mapView else { return }
         mapView.addAnnotation(marker)
         marker.updatePosition(coordinate: marker.coordinate, heading: marker.rotation)

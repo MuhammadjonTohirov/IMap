@@ -222,6 +222,22 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
     public func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
         // Mark style as loaded and drain any pending camera operations
         Logging.l(tag: "MapLibre", "Map style loaded")
+        
+        // Restore Polylines
+        self.savedPolylines.forEach { polyline in
+            self.addPolylineToMap(polyline)
+        }
+        
+        // Restore Buildings
+        self.toggleBuildings(visible: self.isBuildingsEnabled)
+        
+        // Restore Markers (if missing)
+        let existingMarkerIds = Set(mapView.annotations?.compactMap { ($0 as? UniversalMarker)?.id } ?? [])
+        self.markers.values.forEach { marker in
+            if !existingMarkerIds.contains(marker.id) {
+                self.addMarkerToMap(marker)
+            }
+        }
     }
     
     public func mapViewDidFinishRenderingMap(_ mapView: MLNMapView, fullyRendered: Bool) {
