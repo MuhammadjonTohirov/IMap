@@ -279,6 +279,19 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     @MainActor
+    public func setOrUpdate(polylines: [UniversalMapPolyline]) {
+        let newIds = Set(polylines.map { $0.id })
+        
+        // Identify IDs to remove (present in current but not in new)
+        let idsToRemove = polylinesById.keys.filter { !newIds.contains($0) }
+        
+        idsToRemove.forEach { removePolyline(withId: $0) }
+        
+        // Add or update (addPolyline handles upsert)
+        polylines.forEach { addPolyline($0) }
+    }
+    
+    @MainActor
     public func set(userLocationIcon: UIImage, scale: CGFloat = 1.0) {
         mapProviderInstance.setUserLocationIcon(userLocationIcon, scale: scale)
     }
