@@ -209,7 +209,12 @@ public class UniversalMapViewModel: ObservableObject {
     
     /// Update an existing polyline with a new polyline object
     public func updatePolyline(_ polyline: UniversalMapPolyline) {
-        self.addPolyline(polyline)
+        if polylinesById[polyline.id] != nil {
+            polylinesById[polyline.id] = polyline
+            mapProviderInstance.updatePolyline(polyline)
+        } else {
+            addPolyline(polyline)
+        }
     }
     
     /// Update an existing polyline's coordinates by its ID
@@ -219,7 +224,8 @@ public class UniversalMapViewModel: ObservableObject {
     public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
         guard var polyline = polylinesById[id] else { return }
         polyline.coordinates = coordinates
-        self.addPolyline(polyline)
+        polylinesById[id] = polyline
+        mapProviderInstance.updatePolyline(id: id, coordinates: coordinates)
     }
     
     /// Remove all polylines from the map
@@ -304,8 +310,14 @@ public class UniversalMapViewModel: ObservableObject {
         
         idsToRemove.forEach { removePolyline(withId: $0) }
         
-        // Add or update (addPolyline handles upsert)
-        polylines.forEach { addPolyline($0) }
+        // Add or update
+        polylines.forEach { polyline in
+            if polylinesById[polyline.id] != nil {
+                updatePolyline(polyline)
+            } else {
+                addPolyline(polyline)
+            }
+        }
     }
     
     @MainActor

@@ -299,8 +299,41 @@ public extension GoogleMapsViewWrapperModel {
     // MARK: - Polyline management
     
     func addPolyline(id: String, polyline: GMSPolyline) {
+        // Remove existing if any to avoid duplicates/leaks
+        if let existing = self.polylines[id] {
+            existing.map = nil
+        }
+        
         self.polylines[id] = polyline
         polyline.map = self.mapView
+    }
+    
+    func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+        guard let polyline = self.polylines[id] else { return }
+        
+        let path = GMSMutablePath()
+        coordinates.forEach { path.add($0) }
+        polyline.path = path
+    }
+    
+    func updatePolyline(id: String, with newPolyline: UniversalMapPolyline) {
+        // If it doesn't exist, we can add it, or just return.
+        // Assuming update is called when we know it exists.
+        guard let polyline = self.polylines[id] else {
+            // Fallback to add
+            addPolyline(id: id, polyline: newPolyline.gmsPolyline())
+            return
+        }
+        
+        // Update properties
+        let path = GMSMutablePath()
+        newPolyline.coordinates.forEach { path.add($0) }
+        polyline.path = path
+        
+        polyline.strokeColor = newPolyline.color
+        polyline.strokeWidth = newPolyline.width
+        polyline.geodesic = newPolyline.geodesic
+        // Title isn't directly visualized on GMSPolyline usually, but properties are updated
     }
     
     func removePolyline(id: String) {

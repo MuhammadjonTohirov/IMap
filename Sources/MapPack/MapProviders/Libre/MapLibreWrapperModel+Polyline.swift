@@ -169,16 +169,22 @@ extension MapLibreWrapperModel {
     
     /// Add a polyline from raw coordinates
     /// - Parameters:
+    ///   - id: Optional ID for the polyline. If nil, a UUID will be generated.
     ///   - coordinates: Array of coordinates for the polyline
     ///   - title: Optional title
     ///   - color: Color of the polyline
     ///   - width: Width of the line
     /// - Returns: The created polyline object
     @discardableResult
-    public func addPolyline(coordinates: [CLLocationCoordinate2D], title: String? = nil, color: UIColor = .blue, width: CGFloat = 3.0) -> MapPolyline {
+    public func addPolyline(id: String? = nil, coordinates: [CLLocationCoordinate2D], title: String? = nil, color: UIColor = .blue, width: CGFloat = 3.0) -> MapPolyline {
+        let polylineId = id ?? UUID().uuidString
+        
+        // Remove existing if any (to prevent duplicates if same ID passed)
+        removePolyline(id: polylineId)
+        
         // Create a new polyline object
         let polyline = MapPolyline(
-            id: UUID().uuidString,
+            id: polylineId,
             title: title,
             coordinates: coordinates,
             color: color,
@@ -192,6 +198,54 @@ extension MapLibreWrapperModel {
         addPolylineToMap(polyline)
         
         return polyline
+    }
+    
+    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+        guard let index = savedPolylines.firstIndex(where: { $0.id == id }) else { return }
+        
+        // Create updated struct (since MapPolyline is immutable)
+        let old = savedPolylines[index]
+        let newPolyline = MapPolyline(
+            id: old.id,
+            title: old.title,
+            coordinates: coordinates,
+            color: old.color,
+            width: old.width
+        )
+        savedPolylines[index] = newPolyline
+        
+        // Update the shape source on the map
+        guard let style = mapView?.style,
+              let source = style.source(withIdentifier: "polyline-source-\(id)") as? MLNShapeSource else {
+            // If source missing, try full add
+            addPolylineToMap(newPolyline)
+            return
+        }
+        
+        let mlnPolyline = MLNPolyline(coordinates: coordinates, count: UInt(coordinates.count))
+        source.shape = mlnPolyline
+    }
+    
+    public func updatePolyline(id: String, color: UIColor, width: CGFloat) {
+        guard let index = savedPolylines.firstIndex(where: { $0.id == id }) else { return }
+        
+        let old = savedPolylines[index]
+        let newPolyline = MapPolyline(
+            id: old.id,
+            title: old.title,
+            coordinates: old.coordinates,
+            color: color,
+            width: width
+        )
+        savedPolylines[index] = newPolyline
+        
+        guard let style = mapView?.style,
+              let layer = style.layer(withIdentifier: "polyline-layer-\(id)") as? MLNLineStyleLayer else {
+             return
+        }
+        
+        layer.lineColor = NSExpression(forConstantValue: color)
+        layer.lineWidth = NSExpression(forConstantValue: width)
     }
     
     /// Remove a polyline from the map

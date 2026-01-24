@@ -234,6 +234,19 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         self.viewModel.addPolyline(id: polyline.id, polyline: polyline.gmsPolyline())
     }
     
+    public func updatePolyline(_ polyline: UniversalMapPolyline) {
+        self.polylines[polyline.id] = polyline
+        self.viewModel.updatePolyline(id: polyline.id, with: polyline)
+    }
+    
+    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+        guard var polyline = self.polylines[id] else { return }
+        polyline.coordinates = coordinates
+        self.polylines[id] = polyline
+        
+        self.viewModel.updatePolyline(id: id, coordinates: coordinates)
+    }
+    
     public func removePolyline(withId id: String) {
         self.viewModel.removePolyline(id: id)
         self.polylines.removeValue(forKey: id)

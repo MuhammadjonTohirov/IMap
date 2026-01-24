@@ -48,6 +48,12 @@ public protocol MapProviderProtocol: NSObject {
     /// Add a polyline to the map
     func addPolyline(_ polyline: UniversalMapPolyline)
     
+    /// Update an existing polyline on the map
+    func updatePolyline(_ polyline: UniversalMapPolyline)
+    
+    /// Update an existing polyline's coordinates
+    func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D])
+    
     /// Remove a polyline from the map
     func removePolyline(withId id: String)
     

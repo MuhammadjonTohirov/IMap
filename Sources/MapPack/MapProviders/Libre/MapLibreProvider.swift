@@ -132,11 +132,28 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         polylines[polyline.id] = polyline
 
         viewModel.addPolyline(
+            id: polyline.id,
             coordinates: polyline.coordinates,
             title: polyline.title,
             color: polyline.color,
             width: polyline.width
         )
+    }
+    
+    public func updatePolyline(_ polyline: UniversalMapPolyline) {
+        polylines[polyline.id] = polyline
+        // Update coordinates
+        viewModel.updatePolyline(id: polyline.id, coordinates: polyline.coordinates)
+        // Update style
+        viewModel.updatePolyline(id: polyline.id, color: polyline.color, width: polyline.width)
+    }
+    
+    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+        if var p = polylines[id] {
+            p.coordinates = coordinates
+            polylines[id] = p
+        }
+        viewModel.updatePolyline(id: id, coordinates: coordinates)
     }
     
     public func removePolyline(withId id: String) {
