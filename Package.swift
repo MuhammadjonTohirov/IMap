@@ -29,5 +29,9 @@ let package = Package(
             resources: [
             ]
         ),
+        .testTarget(
+            name: "IMapTests",
+            dependencies: ["MapPack"]
+        ),
     ]
 )

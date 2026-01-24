@@ -78,6 +78,8 @@ public class UniversalMapViewModel: ObservableObject {
     
     private var polylinesById: [String: UniversalMapPolyline] = [:]
     private var cancellables = Set<AnyCancellable>()
+    private var routeTracker: RouteTrackingManager?
+    private var currentTrackedPolyline: UniversalMapPolyline?
     
     // MARK: - Initialization
     
@@ -205,6 +207,21 @@ public class UniversalMapViewModel: ObservableObject {
         mapProviderInstance.removePolyline(withId: id)
     }
     
+    /// Update an existing polyline with a new polyline object
+    public func updatePolyline(_ polyline: UniversalMapPolyline) {
+        self.addPolyline(polyline)
+    }
+    
+    /// Update an existing polyline's coordinates by its ID
+    /// - Parameters:
+    ///   - id: The ID of the polyline to update
+    ///   - coordinates: The new list of coordinates
+    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+        guard var polyline = polylinesById[id] else { return }
+        polyline.coordinates = coordinates
+        self.addPolyline(polyline)
+    }
+    
     /// Remove all polylines from the map
     public func clearAllPolylines() {
         polylinesById.removeAll()
@@ -304,6 +321,17 @@ public class UniversalMapViewModel: ObservableObject {
     @MainActor
     public func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
         mapProviderInstance.zoomOut(minLevel: minLevel, shift: shift)
+    }
+    
+    // MARK: - Route Tracking
+    
+    /// Starts tracking a driver along the provided route.
+    /// This initializes the tracking manager with the full polyline.
+    public func startTracking(route: UniversalMapPolyline) {
+        self.currentTrackedPolyline = route
+        self.routeTracker = RouteTrackingManager(routeCoordinates: route.coordinates)
+        // Ensure the route is visible on the map
+        self.addPolyline(route)
     }
     
     // MARK: - Private Methods
