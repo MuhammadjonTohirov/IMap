@@ -195,9 +195,9 @@ public class UniversalMapViewModel: ObservableObject {
     
     /// Add a polyline to the map
     @discardableResult
-    public func addPolyline(_ polyline: UniversalMapPolyline) -> String {
+    public func addPolyline(_ polyline: UniversalMapPolyline, animated: Bool = false) -> String {
         polylinesById[polyline.id] = polyline
-        mapProviderInstance.addPolyline(polyline)
+        mapProviderInstance.addPolyline(polyline, animated: animated)
         return polyline.id
     }
     
@@ -208,12 +208,12 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     /// Update an existing polyline with a new polyline object
-    public func updatePolyline(_ polyline: UniversalMapPolyline) {
+    public func updatePolyline(_ polyline: UniversalMapPolyline, animated: Bool = false) {
         if polylinesById[polyline.id] != nil {
             polylinesById[polyline.id] = polyline
-            mapProviderInstance.updatePolyline(polyline)
+            mapProviderInstance.updatePolyline(polyline, animated: animated)
         } else {
-            addPolyline(polyline)
+            addPolyline(polyline, animated: animated)
         }
     }
     
@@ -221,11 +221,11 @@ public class UniversalMapViewModel: ObservableObject {
     /// - Parameters:
     ///   - id: The ID of the polyline to update
     ///   - coordinates: The new list of coordinates
-    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D], animated: Bool = false) {
         guard var polyline = polylinesById[id] else { return }
         polyline.coordinates = coordinates
         polylinesById[id] = polyline
-        mapProviderInstance.updatePolyline(id: id, coordinates: coordinates)
+        mapProviderInstance.updatePolyline(id: id, coordinates: coordinates, animated: animated)
     }
     
     /// Remove all polylines from the map
@@ -295,14 +295,14 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     @MainActor
-    public func set(polylines: [UniversalMapPolyline]) {
+    public func set(polylines: [UniversalMapPolyline], animated: Bool = false) {
         polylines.forEach { line in
-            self.mapProviderInstance.addPolyline(line)
+            self.mapProviderInstance.addPolyline(line, animated: animated)
         }
     }
     
     @MainActor
-    public func setOrUpdate(polylines: [UniversalMapPolyline]) {
+    public func setOrUpdate(polylines: [UniversalMapPolyline], animated: Bool = false) {
         let newIds = Set(polylines.map { $0.id })
         
         // Identify IDs to remove (present in current but not in new)
@@ -313,9 +313,9 @@ public class UniversalMapViewModel: ObservableObject {
         // Add or update
         polylines.forEach { polyline in
             if polylinesById[polyline.id] != nil {
-                updatePolyline(polyline)
+                updatePolyline(polyline, animated: animated)
             } else {
-                addPolyline(polyline)
+                addPolyline(polyline, animated: animated)
             }
         }
     }
@@ -366,7 +366,7 @@ public class UniversalMapViewModel: ObservableObject {
         
         // Re-add all polylines
         for polyline in polylines {
-            mapProviderInstance.addPolyline(polyline)
+            mapProviderInstance.addPolyline(polyline, animated: false)
         }
     }
 }

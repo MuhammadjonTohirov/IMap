@@ -128,7 +128,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         viewModel.clearAllMarkers()
     }
     
-    public func addPolyline(_ polyline: UniversalMapPolyline) {
+    public func addPolyline(_ polyline: UniversalMapPolyline, animated: Bool) {
         polylines[polyline.id] = polyline
 
         viewModel.addPolyline(
@@ -136,24 +136,25 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
             coordinates: polyline.coordinates,
             title: polyline.title,
             color: polyline.color,
-            width: polyline.width
+            width: polyline.width,
+            animated: animated
         )
     }
     
-    public func updatePolyline(_ polyline: UniversalMapPolyline) {
+    public func updatePolyline(_ polyline: UniversalMapPolyline, animated: Bool) {
         polylines[polyline.id] = polyline
         // Update coordinates
-        viewModel.updatePolyline(id: polyline.id, coordinates: polyline.coordinates)
+        viewModel.updatePolyline(id: polyline.id, coordinates: polyline.coordinates, animated: animated)
         // Update style
         viewModel.updatePolyline(id: polyline.id, color: polyline.color, width: polyline.width)
     }
     
-    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D], animated: Bool) {
         if var p = polylines[id] {
             p.coordinates = coordinates
             polylines[id] = p
         }
-        viewModel.updatePolyline(id: id, coordinates: coordinates)
+        viewModel.updatePolyline(id: id, coordinates: coordinates, animated: animated)
     }
     
     public func removePolyline(withId id: String) {

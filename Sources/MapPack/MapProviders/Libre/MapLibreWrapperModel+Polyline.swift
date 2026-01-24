@@ -137,20 +137,39 @@ extension MapLibreWrapperModel {
     
     /// Add a predefined polyline to the map
     /// - Parameter polyline: MapPolyline object to add
-    public func addPolylineToMap(_ polyline: MapPolyline) {
+    public func addPolylineToMap(_ polyline: MapPolyline, animated: Bool = false) {
         guard let mapView = mapView, let style = mapView.style else {
             // If style isn't loaded yet, we'll add it in didFinishLoading
             return
         }
         
+        // Cancel existing animation
+        activePolylineAnimations[polyline.id]?.invalidate()
+        activePolylineAnimations[polyline.id] = nil
+        
+        let sourceId = "polyline-source-\(polyline.id)"
+        let layerId = "polyline-layer-\(polyline.id)"
+        
+        // Clean up previous layers if any
+        if let layer = style.layer(withIdentifier: layerId) { style.removeLayer(layer) }
+        if let source = style.source(withIdentifier: sourceId) { style.removeSource(source) }
+        
+        // Determine initial coordinates
+        let initialCoords: [CLLocationCoordinate2D]
+        if animated && polyline.coordinates.count > 0 {
+            initialCoords = [polyline.coordinates[0]]
+        } else {
+            initialCoords = polyline.coordinates
+        }
+        
         // Create polyline from coordinates
-        let mlnPolyline = MLNPolyline(coordinates: polyline.coordinates, count: UInt(polyline.coordinates.count))
+        let mlnPolyline = MLNPolyline(coordinates: initialCoords, count: UInt(initialCoords.count))
         
         // Create shape source
-        let source = MLNShapeSource(identifier: "polyline-source-\(polyline.id)", shape: mlnPolyline, options: nil)
+        let source = MLNShapeSource(identifier: sourceId, shape: mlnPolyline, options: nil)
         
         // Create line style layer
-        let lineLayer = MLNLineStyleLayer(identifier: "polyline-layer-\(polyline.id)", source: source)
+        let lineLayer = MLNLineStyleLayer(identifier: layerId, source: source)
         
         // Set the line color using NSExpression
         lineLayer.lineColor = NSExpression(forConstantValue: polyline.color)
@@ -165,6 +184,50 @@ extension MapLibreWrapperModel {
         // Add source and layer to map
         style.addSource(source)
         style.addLayer(lineLayer)
+        
+        if animated && polyline.coordinates.count > 1 {
+            animatePolylineDrawing(id: polyline.id, fullCoordinates: polyline.coordinates)
+        }
+    }
+    
+    private func animatePolylineDrawing(id: String, fullCoordinates: [CLLocationCoordinate2D]) {
+        let count = fullCoordinates.count
+        var currentIndex: Int = 1
+        
+        let duration: TimeInterval = 1.0
+        let fps: Double = 60
+        let interval = 1.0 / fps
+        let totalSteps = duration * fps
+        let pointsPerStep = max(1, Int(ceil(Double(count) / totalSteps)))
+        
+        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            // Check existence
+            guard let style = self.mapView?.style,
+                  let source = style.source(withIdentifier: "polyline-source-\(id)") as? MLNShapeSource else {
+                timer.invalidate()
+                self.activePolylineAnimations[id] = nil
+                return
+            }
+            
+            let endIndex = min(currentIndex + pointsPerStep, count)
+            let currentCoords = Array(fullCoordinates[0..<endIndex])
+            
+            let shape = MLNPolyline(coordinates: currentCoords, count: UInt(currentCoords.count))
+            source.shape = shape
+            
+            currentIndex = endIndex
+            
+            if currentIndex >= count {
+                timer.invalidate()
+                self.activePolylineAnimations[id] = nil
+            }
+        }
+        self.activePolylineAnimations[id] = timer
     }
     
     /// Add a polyline from raw coordinates
@@ -176,7 +239,7 @@ extension MapLibreWrapperModel {
     ///   - width: Width of the line
     /// - Returns: The created polyline object
     @discardableResult
-    public func addPolyline(id: String? = nil, coordinates: [CLLocationCoordinate2D], title: String? = nil, color: UIColor = .blue, width: CGFloat = 3.0) -> MapPolyline {
+    public func addPolyline(id: String? = nil, coordinates: [CLLocationCoordinate2D], title: String? = nil, color: UIColor = .blue, width: CGFloat = 3.0, animated: Bool = false) -> MapPolyline {
         let polylineId = id ?? UUID().uuidString
         
         // Remove existing if any (to prevent duplicates if same ID passed)
@@ -195,13 +258,17 @@ extension MapLibreWrapperModel {
         savedPolylines.append(polyline)
         
         // Add to map
-        addPolylineToMap(polyline)
+        addPolylineToMap(polyline, animated: animated)
         
         return polyline
     }
     
-    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D], animated: Bool = false) {
         guard let index = savedPolylines.firstIndex(where: { $0.id == id }) else { return }
+        
+        // Cancel existing animation
+        activePolylineAnimations[id]?.invalidate()
+        activePolylineAnimations[id] = nil
         
         // Create updated struct (since MapPolyline is immutable)
         let old = savedPolylines[index]
@@ -214,11 +281,16 @@ extension MapLibreWrapperModel {
         )
         savedPolylines[index] = newPolyline
         
+        if animated {
+            addPolylineToMap(newPolyline, animated: true)
+            return
+        }
+        
         // Update the shape source on the map
         guard let style = mapView?.style,
               let source = style.source(withIdentifier: "polyline-source-\(id)") as? MLNShapeSource else {
             // If source missing, try full add
-            addPolylineToMap(newPolyline)
+            addPolylineToMap(newPolyline, animated: false)
             return
         }
         
@@ -251,6 +323,9 @@ extension MapLibreWrapperModel {
     /// Remove a polyline from the map
     /// - Parameter polylineId: ID of the polyline to remove
     public func removePolyline(id polylineId: String) {
+        activePolylineAnimations[polylineId]?.invalidate()
+        activePolylineAnimations[polylineId] = nil
+        
         guard let style = mapView?.style,
               let index = savedPolylines.firstIndex(where: { $0.id == polylineId }) else {
             return

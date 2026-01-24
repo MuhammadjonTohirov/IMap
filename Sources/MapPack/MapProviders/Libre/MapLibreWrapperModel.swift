@@ -51,6 +51,9 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     let userAccuracySourceID = "user-accuracy-source"
     let userAccuracyLayerID = "user-accuracy-layer"
     
+    // Animation state
+    var activePolylineAnimations: [String: Timer] = [:]
+    
     // MARK: - Readiness management
     
     private var pendingCameraActions: [() -> Void] = []

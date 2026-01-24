@@ -229,22 +229,22 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         viewModel.removeAllMarkers()
     }
     
-    public func addPolyline(_ polyline: UniversalMapPolyline) {
+    public func addPolyline(_ polyline: UniversalMapPolyline, animated: Bool) {
         self.polylines[polyline.id] = polyline
-        self.viewModel.addPolyline(id: polyline.id, polyline: polyline.gmsPolyline())
+        self.viewModel.addPolyline(id: polyline.id, polyline: polyline.gmsPolyline(), animated: animated)
     }
     
-    public func updatePolyline(_ polyline: UniversalMapPolyline) {
+    public func updatePolyline(_ polyline: UniversalMapPolyline, animated: Bool) {
         self.polylines[polyline.id] = polyline
-        self.viewModel.updatePolyline(id: polyline.id, with: polyline)
+        self.viewModel.updatePolyline(id: polyline.id, with: polyline, animated: animated)
     }
     
-    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+    public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D], animated: Bool) {
         guard var polyline = self.polylines[id] else { return }
         polyline.coordinates = coordinates
         self.polylines[id] = polyline
         
-        self.viewModel.updatePolyline(id: id, coordinates: coordinates)
+        self.viewModel.updatePolyline(id: id, coordinates: coordinates, animated: animated)
     }
     
     public func removePolyline(withId id: String) {

@@ -20,6 +20,8 @@ public protocol GoogleMapsConfigProtocol: UniversalMapConfigProtocol {
 
 open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     // The actual Google map view
+    var activePolylineAnimations: [String: Timer] = [:]
+
     public private(set) weak var mapView: GMSMapView?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
     
@@ -297,46 +299,137 @@ public extension GoogleMapsViewWrapperModel {
     }
     
     // MARK: - Polyline management
-    
-    func addPolyline(id: String, polyline: GMSPolyline) {
+        
+    func addPolyline(id: String, polyline: GMSPolyline, animated: Bool = false) {
+        // Cancel existing animation
+        activePolylineAnimations[id]?.invalidate()
+        activePolylineAnimations[id] = nil
+        
         // Remove existing if any to avoid duplicates/leaks
         if let existing = self.polylines[id] {
             existing.map = nil
         }
         
         self.polylines[id] = polyline
-        polyline.map = self.mapView
+        
+        if animated, let path = polyline.path, path.count() > 1 {
+            let fullPath = path
+            let emptyPath = GMSMutablePath()
+            // Start with first point
+            emptyPath.add(fullPath.coordinate(at: 0))
+            
+            polyline.path = emptyPath
+            polyline.map = self.mapView
+            
+            animatePolylineDrawing(id: id, polyline: polyline, fullPath: fullPath)
+        } else {
+            polyline.map = self.mapView
+        }
     }
     
-    func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D]) {
+    private func animatePolylineDrawing(id: String, polyline: GMSPolyline, fullPath: GMSPath) {
+        let count = fullPath.count()
+        var currentIndex: UInt = 1
+        // Animation config
+        let duration: TimeInterval = 1.0
+        let fps: Double = 60
+        let interval = 1.0 / fps
+        let totalSteps = duration * fps
+        let pointsPerStep = max(1, UInt(ceil(Double(count) / totalSteps)))
+        
+        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+            
+            // Check if polyline still exists and is the same instance
+            guard let currentPolyline = self.polylines[id], currentPolyline == polyline else {
+                timer.invalidate()
+                self.activePolylineAnimations[id] = nil
+                return
+            }
+            
+            guard let path = polyline.path else { return }
+            
+            let currentPath = GMSMutablePath(path: path)
+            
+            let endIndex = min(currentIndex + pointsPerStep, count)
+            for i in currentIndex..<endIndex {
+                currentPath.add(fullPath.coordinate(at: i))
+            }
+            
+            polyline.path = currentPath
+            currentIndex = endIndex
+            
+            if currentIndex >= count {
+                timer.invalidate()
+                self.activePolylineAnimations[id] = nil
+            }
+        }
+        
+        activePolylineAnimations[id] = timer
+    }
+    
+    func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D], animated: Bool = false) {
         guard let polyline = self.polylines[id] else { return }
+        
+        // Cancel active animation if any, and set full path immediately if not animating
+        activePolylineAnimations[id]?.invalidate()
+        activePolylineAnimations[id] = nil
         
         let path = GMSMutablePath()
         coordinates.forEach { path.add($0) }
-        polyline.path = path
+        
+        if animated {
+            // Reuse animation logic for updates? 
+            // The user requested animation for "drawing".
+            // If we update coordinates, we treat it as a redraw from start if animated is true.
+            let emptyPath = GMSMutablePath()
+            if coordinates.count > 0 {
+                emptyPath.add(coordinates[0])
+            }
+            polyline.path = emptyPath
+            animatePolylineDrawing(id: id, polyline: polyline, fullPath: path)
+        } else {
+            polyline.path = path
+        }
     }
     
-    func updatePolyline(id: String, with newPolyline: UniversalMapPolyline) {
+    func updatePolyline(id: String, with newPolyline: UniversalMapPolyline, animated: Bool = false) {
         // If it doesn't exist, we can add it, or just return.
-        // Assuming update is called when we know it exists.
         guard let polyline = self.polylines[id] else {
             // Fallback to add
-            addPolyline(id: id, polyline: newPolyline.gmsPolyline())
+            addPolyline(id: id, polyline: newPolyline.gmsPolyline(), animated: animated)
             return
         }
         
-        // Update properties
+        activePolylineAnimations[id]?.invalidate()
+        activePolylineAnimations[id] = nil
+        
         let path = GMSMutablePath()
         newPolyline.coordinates.forEach { path.add($0) }
-        polyline.path = path
         
         polyline.strokeColor = newPolyline.color
         polyline.strokeWidth = newPolyline.width
         polyline.geodesic = newPolyline.geodesic
-        // Title isn't directly visualized on GMSPolyline usually, but properties are updated
+        
+        if animated {
+            let emptyPath = GMSMutablePath()
+            if newPolyline.coordinates.count > 0 {
+                emptyPath.add(newPolyline.coordinates[0])
+            }
+            polyline.path = emptyPath
+            animatePolylineDrawing(id: id, polyline: polyline, fullPath: path)
+        } else {
+            polyline.path = path
+        }
     }
     
     func removePolyline(id: String) {
+        activePolylineAnimations[id]?.invalidate()
+        activePolylineAnimations[id] = nil
+        
         guard let polyline = self.polylines[id] else {
             return
         }
@@ -346,6 +439,9 @@ public extension GoogleMapsViewWrapperModel {
     }
     
     func removeAllPolylines() {
+        activePolylineAnimations.values.forEach { $0.invalidate() }
+        activePolylineAnimations.removeAll()
+        
         self.polylines.values.forEach {
             $0.map = nil
         }
