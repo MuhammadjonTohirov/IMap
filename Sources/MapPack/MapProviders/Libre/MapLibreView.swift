@@ -34,6 +34,20 @@ struct MapLibreMapView: View {
         .onChange(of: colorScheme) { newValue in
             viewModel.onChangeColorScheme(newValue)
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            guard let mapView = viewModel.mapView else { return }
+            
+            // Toggle to refresh location manager
+            if showsUserLocation {
+                mapView.showsUserLocation = false
+                mapView.showsUserLocation = true
+                
+                // Re-apply tracking mode if it was lost during the permission change
+                if let mode = trackingMode {
+                    mapView.userTrackingMode = mode
+                }
+            }
+        }
         .onAppear {
             viewModel.onChangeColorScheme(colorScheme)
         }
