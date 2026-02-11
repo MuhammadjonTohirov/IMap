@@ -90,3 +90,7 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
         return new
     }
 }
+
+extension CLLocationCoordinate2D: @retroactive @unchecked Sendable {
+    
+}

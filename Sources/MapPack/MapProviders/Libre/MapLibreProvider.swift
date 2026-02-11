@@ -39,6 +39,10 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     
     public var polylines: [String: UniversalMapPolyline] = [:]
     
+    public var capabilities: MapCapabilities {
+        return [.userTrackingMode, .buildings, .styling, .polylines]
+    }
+    
     required public override init() {
         super.init()
     }

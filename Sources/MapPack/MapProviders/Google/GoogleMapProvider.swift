@@ -119,6 +119,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         viewModel.allMarkers
     }
     
+    // Google Maps Capabilities
+    public var capabilities: MapCapabilities {
+        return [.buildings, .styling, .polylines]
+    }
+    
     required public override init() {
         super.init()
         locationManager.delegate = self
@@ -307,7 +312,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     }
     
     public func setUserTrackingMode(_ tracking: Bool) {
-        // TODO: needs to implement if possible
+        if capabilities.contains(.userTrackingMode) {
+             // Implementation would go here
+        } else {
+            Logging.l(tag: "GoogleMapsProvider", "User tracking mode is not supported by this provider.")
+        }
     }
     
     public func setInteractionDelegate(_ delegate: MapInteractionDelegate?) {
