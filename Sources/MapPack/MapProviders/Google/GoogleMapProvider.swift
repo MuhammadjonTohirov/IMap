@@ -224,10 +224,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     }
     
     public func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
-        let mrk = self.viewModel.markers[marker.id]
+        guard let marker = marker as? UniversalMarker else {
+            return
+        }
         
-        mrk?.set(coordinate: marker.coordinate)
-        mrk?.set(heading: marker.rotation)
+        self.viewModel.updateMarker(marker)
     }
     
     public func clearAllMarkers() {

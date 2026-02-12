@@ -11,6 +11,7 @@ import MapLibre
 import SwiftUI
 import Combine
 import UIKit
+import CoreLocation
 
 public protocol LibreMapsKeyProvider: UniversalMapConfigProtocol, AnyObject {
     
@@ -317,11 +318,44 @@ extension MapLibreWrapperModel {
         guard let mapView = mapView else { return }
         mapView.addAnnotation(marker)
         marker.updatePosition(coordinate: marker.coordinate, heading: marker.rotation)
-        marker.view?.transform = CGAffineTransform(rotationAngle: (.pi / 180) * CGFloat(marker.rotation))
+        applyMarkerViewRotation(marker)
     }
     
     func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {
         self.mapView?.setVisibleCoordinates(coordinates, count: UInt(coordinates.count), edgePadding: edges, animated: animated)
+    }
+}
+
+extension MapLibreWrapperModel {
+    func refreshAllMarkerViewRotations() {
+        markers.values.forEach { marker in
+            applyMarkerViewRotation(marker)
+        }
+    }
+    
+    func applyMarkerViewRotation(_ marker: UniversalMarker) {
+        marker.view?.transform = CGAffineTransform(
+            rotationAngle: markerViewRotationAngle(for: marker)
+        )
+    }
+    
+    private func markerViewRotationAngle(for marker: UniversalMarker) -> CGFloat {
+        let markerHeading = marker.rotation
+        
+        guard marker.compensatesForMapBearing else {
+            return (.pi / 180) * CGFloat(normalizedHeading(markerHeading))
+        }
+        
+        let mapBearing = mapView?.camera.heading ?? 0
+        let displayHeading = normalizedHeading(markerHeading - mapBearing)
+        return (.pi / 180) * CGFloat(displayHeading)
+    }
+    
+    private func normalizedHeading(_ value: CLLocationDirection) -> CLLocationDirection {
+        var angle = value.truncatingRemainder(dividingBy: 360)
+        if angle > 180 { angle -= 360 }
+        if angle < -180 { angle += 360 }
+        return angle
     }
 }
 

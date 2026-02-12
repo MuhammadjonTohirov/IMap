@@ -17,6 +17,8 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
     public let annotationView: AnnotationViewCompletionHandler?
     public let reuseIdentifier: String?
     public let view: UIView?
+    public private(set) var compensatesForMapBearing: Bool = false
+    public private(set) var worldHeading: CLLocationDirection = 0
     
     public init(
         id: String? = nil,
@@ -63,6 +65,12 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
         view.frame = .init(x: x, y: y, width: view.frame.width, height: view.frame.height)
         return self
     }
+    
+    @discardableResult
+    public func set(compensatesForMapBearing enabled: Bool) -> Self {
+        self.compensatesForMapBearing = enabled
+        return self
+    }
 
     public func set(coordinate: CLLocationCoordinate2D) {
         self.position = coordinate
@@ -70,12 +78,18 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
     }
     
     public func set(heading: CLLocationDirection) {
+        self.worldHeading = heading
         self.rotation = heading
+    }
+    
+    public func set(displayHeading: CLLocationDirection) {
+        self.rotation = displayHeading
     }
     
     public func updatePosition(coordinate: CLLocationCoordinate2D, heading: CLLocationDirection) {
         self.position = coordinate
         self.coordinate = coordinate
+        self.worldHeading = heading
         self.rotation = heading
     }
     
@@ -87,6 +101,8 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
             reuseIdentifier: self.reuseIdentifier
         )
         new.rotation = self.rotation
+        new.compensatesForMapBearing = self.compensatesForMapBearing
+        new.worldHeading = self.worldHeading
         return new
     }
 }

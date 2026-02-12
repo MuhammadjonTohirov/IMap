@@ -8,6 +8,7 @@
 import Foundation
 import GoogleMaps
 import SwiftUI
+import CoreLocation
 
 public protocol UniversalMapConfigProtocol: Sendable {
     var lightStyle: String {get set}
@@ -189,6 +190,7 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         // Add newly visible markers
         for id in toAdd {
             if let marker = allMarkers[id] {
+                applyRenderedMarkerRotation(marker)
                 marker.map = mapView
                 markers[id] = marker
             }
@@ -210,6 +212,7 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
     public func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
         // Update visible markers when camera stops moving
         refreshVisibleMarkers()
+        refreshAllRenderedMarkerRotations()
         
         Task {@MainActor in
             let location: CLLocation = .init(
@@ -225,6 +228,7 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
     }
     
     public func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
+        refreshAllRenderedMarkerRotations()
         // Update UserLocationMarkerView if visible
         // We know the ID is USER_LOCATION_MARKER, but the WrapperModel doesn't know that constant.
         // We can iterate or just look for markers with that view type.
@@ -289,7 +293,8 @@ public extension GoogleMapsViewWrapperModel {
         // Update the data source entry if it exists
         if let existing = allMarkers[id] {
             existing.set(coordinate: marker.coordinate)
-            existing.set(heading: marker.rotation)
+            existing.set(heading: marker.worldHeading)
+            applyRenderedMarkerRotation(existing)
         } else {
             // If not present, add it to the data source
             allMarkers[id] = marker
@@ -446,6 +451,32 @@ public extension GoogleMapsViewWrapperModel {
             $0.map = nil
         }
         self.polylines.removeAll()
+    }
+}
+
+private extension GoogleMapsViewWrapperModel {
+    func refreshAllRenderedMarkerRotations() {
+        markers.values.forEach { marker in
+            applyRenderedMarkerRotation(marker)
+        }
+    }
+    
+    func applyRenderedMarkerRotation(_ marker: UniversalMarker) {
+        marker.set(displayHeading: displayedHeading(for: marker))
+    }
+    
+    func displayedHeading(for marker: UniversalMarker) -> CLLocationDirection {
+        if marker.compensatesForMapBearing {
+            let mapBearing = CLLocationDirection(mapView?.camera.bearing ?? 0)
+            return normalizedHeading(marker.worldHeading - mapBearing)
+        }
+        return normalizedHeading(marker.worldHeading)
+    }
+    
+    func normalizedHeading(_ value: CLLocationDirection) -> CLLocationDirection {
+        var angle = value.truncatingRemainder(dividingBy: 360)
+        if angle < 0 { angle += 360 }
+        return angle
     }
 }
 

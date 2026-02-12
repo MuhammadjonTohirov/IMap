@@ -109,10 +109,12 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
            let view = mapView.view(for: userLocationAnnotation) as? UniversalUserLocationAnnotationView {
              view.updateZoom(mapView.zoomLevel)
         }
+        refreshAllMarkerViewRotations()
     }
     
     public func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
         Task { @MainActor in
+            self.refreshAllMarkerViewRotations()
             Logging.l("Map region did change animated: \(animated)")
             self.interactionDelegate?.mapDidEndDragging(
                 at: .init(
