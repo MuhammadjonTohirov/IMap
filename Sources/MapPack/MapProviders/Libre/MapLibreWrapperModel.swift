@@ -288,18 +288,14 @@ extension MapLibreWrapperModel {
     func addMarker(_ marker: any UniversalMapMarkerProtocol) {
         guard let marker = marker as? UniversalMarker else { return }
         
+        removeMarkerAnnotations(withId: marker.id)
         Logging.l("Add marker to map view by id: \(marker.id)")
         markers[marker.id] = marker
         addMarkerToMap(marker)
     }
     
     func removeMarker(withId id: String) {
-        guard let mapView = mapView else { return }
-        
-        if let annotation = mapView.annotations?.first(where: { ($0 as? UniversalMarker)?.id == id }) {
-            Logging.l("Remove marker from map view by id: \(id)")
-            mapView.removeAnnotation(annotation)
-        }
+        removeMarkerAnnotations(withId: id)
         
         markers.removeValue(forKey: id)
     }
@@ -319,6 +315,19 @@ extension MapLibreWrapperModel {
         mapView.addAnnotation(marker)
         marker.updatePosition(coordinate: marker.coordinate, heading: marker.rotation)
         applyMarkerViewRotation(marker)
+    }
+
+    private func removeMarkerAnnotations(withId id: String) {
+        guard let mapView = mapView else { return }
+
+        let annotationsToRemove = (mapView.annotations ?? []).filter { annotation in
+            (annotation as? UniversalMarker)?.id == id
+        }
+
+        guard !annotationsToRemove.isEmpty else { return }
+
+        Logging.l("Remove marker(s) from map view by id: \(id), count=\(annotationsToRemove.count)")
+        mapView.removeAnnotations(annotationsToRemove)
     }
     
     func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {

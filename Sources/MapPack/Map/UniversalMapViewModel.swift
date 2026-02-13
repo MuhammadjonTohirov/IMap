@@ -511,8 +511,8 @@ public extension UniversalMapViewModel {
         return markerId
     }
     
-    /// Enhanced updateMarker that notifies tracking manager
-    func updateMarkerWithTracking(_ marker: any UniversalMapMarkerProtocol) {
+    /// Enhanced marker update for active tracking scenarios.
+    func updateTrackedMarker(_ marker: any UniversalMapMarkerProtocol) {
         updateMarker(marker)
     }
     
@@ -522,4 +522,3 @@ public extension UniversalMapViewModel {
         // Managers are already updated in setMapProvider
     }
 }
-
