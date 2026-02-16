@@ -490,6 +490,6 @@ class LiveRouteTracker {
 
 ## See Also
 
-- [UniversalMapViewModel](UniversalMapViewModel.md)
-- [RouteTrackingManager](RouteTrackingManager.md)
-- [MapProviderProtocol](MapProviderProtocol.md)
+- [UniversalMapViewModel](docsUniversalMapViewModel.md)
+- [RouteTrackingManager](docsRouteTrackingManager.md)
+- [MapProviderProtocol](docsMapProviderProtocol.md)

@@ -478,4 +478,4 @@ Many methods are marked with `@MainActor` and must be called on the main thread.
 - [MapProviderFactory](MapProviderFactory.md)
 - [GoogleMapsProvider](GoogleMapsProvider.md)
 - [MapLibreProvider](MapLibreProvider.md)
-- [UniversalMapViewModel](UniversalMapViewModel.md)
+- [UniversalMapViewModel](docsUniversalMapViewModel.md)

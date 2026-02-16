@@ -28,6 +28,7 @@ IMap abstracts the differences between Google Maps SDK and MapLibre, providing a
 
 - ✅ **Dual Provider Support**: Seamlessly switch between Google Maps and MapLibre
 - ✅ **Unified API**: Single interface for all map operations
+- ✅ **NavigationTrackingCore**: Reusable tracking engine for snapped marker and route-progress updates
 - ✅ **Markers**: Add, update, and remove custom markers with views
 - ✅ **Polylines**: Draw and animate routes with customizable styling
 - ✅ **Camera Control**: Programmatic camera positioning and animations
@@ -77,6 +78,17 @@ targets: [
 ]
 ```
 
+If you want tracking logic without map rendering, depend on `NavigationTrackingCore` directly:
+
+```swift
+targets: [
+    .target(
+        name: "YourApp",
+        dependencies: ["NavigationTrackingCore"]
+    )
+]
+```
+
 ### Manual Package.swift
 
 The package automatically includes the required dependencies:
@@ -85,7 +97,7 @@ The package automatically includes the required dependencies:
 
 ## Quick Start
 
-**For a complete getting started guide, see [Quick Start Guide](docs/QuickStart.md)**
+**For a complete getting started guide, see [Quick Start Guide](docs/docsQuickStart.md)**
 
 ### 1. Basic Setup
 
@@ -177,44 +189,34 @@ Explore detailed documentation for each component:
 
 ### Core Components
 
-- **[UniversalMapViewModel](docs/UniversalMapViewModel.md)** - Main view model for map control
-- **[MapProviderProtocol](docs/MapProviderProtocol.md)** - Protocol defining map provider interface
-- **[MapProvider](docs/MapProvider.md)** - Enumeration of available providers
+- **[UniversalMapViewModel](docs/docsUniversalMapViewModel.md)** - Main view model for map control
+- **[MapProviderProtocol](docs/docsMapProviderProtocol.md)** - Protocol defining map provider interface
 
 ### Providers
 
-- **[GoogleMapsProvider](docs/GoogleMapsProvider.md)** - Google Maps implementation
-- **[MapLibreProvider](docs/MapLibreProvider.md)** - MapLibre implementation
-- **[MapProviderFactory](docs/MapProviderFactory.md)** - Factory for creating providers
+- Provider-specific implementations are available in source under `Sources/MapPack/MapProviders`.
 
 ### Models
 
-- **[UniversalMapCamera](docs/UniversalMapCamera.md)** - Camera position and configuration
-- **[UniversalMapPolyline](docs/UniversalMapPolyline.md)** - Polyline/route representation
-- **[UniversalMapMarker](docs/UniversalMapMarker.md)** - Marker representation
-- **[UniversalMapEdgeInsets](docs/UniversalMapEdgeInsets.md)** - Edge insets configuration
-- **[UniversalMapStyles](docs/UniversalMapStyles.md)** - Map styling options
+- **[UniversalMapCamera](docs/docsUniversalMapCamera.md)** - Camera position and configuration
+- **[UniversalMapPolyline](docs/docsUniversalMapPolyline.md)** - Polyline/route representation
+- **[UniversalMapMarker](docs/docsUniversalMapMarker.md)** - Marker representation
 
 ### Protocols
 
-- **[UniversalMapMarkerProtocol](docs/UniversalMapMarkerProtocol.md)** - Protocol for markers
-- **[MapConfigProtocol](docs/MapConfigProtocol.md)** - Configuration protocol
-- **[MapInteractionDelegate](docs/MapInteractionDelegate.md)** - Interaction event handling
-- **[UniversalMapStyleProtocol](docs/UniversalMapStyleProtocol.md)** - Map style protocol
+- **[UniversalMapMarkerProtocol](docs/docsUniversalMapMarkerProtocol.md)** - Protocol for markers
+- **[MapInteractionDelegate](docs/docsMapInteractionDelegate.md)** - Interaction event handling
 
 ### Advanced Features
 
-- **[RouteTrackingManager](docs/docsRouteTrackingManager.md)** - Track movement along routes
-- **[Marker Visibility Management](docs/MarkerVisibilityManagement.md)** - Performance optimization
-- **[Custom User Location](docs/CustomUserLocation.md)** - Custom location markers
+- **[NavigationTrackingCore](docs/docsNavigationTrackingCore.md)** - Session-level tracking, heading smoothing, and route progress rendering
+- **[NavigationRouteTrackingManager](docs/docsRouteTrackingManager.md)** - Low-level route snapping manager
+- **[Marker Visibility Management](docs/docsMarkerVisibilityManagement.md)** - Performance optimization
 
 ### Guides
 
-- **[Quick Start Guide](docs/QuickStart.md)** - Get started in 5 minutes
-- **[Migration Guide](docs/MigrationGuide.md)** - Switching between providers
-- **[Styling Guide](docs/StylingGuide.md)** - Customizing map appearance
-- **[Performance Guide](docs/PerformanceGuide.md)** - Optimizing map performance
-- **[Integration Guide](docs/IntegrationGuide.md)** - Integrating with your app
+- **[Quick Start Guide](docs/docsQuickStart.md)** - Get started in 5 minutes
+- **[NavigationTrackingCore Guide](docs/docsNavigationTrackingCore.md)** - Detailed integration for marker + polyline updates
 
 ## Architecture
 

@@ -336,7 +336,7 @@ let marker = UniversalMarker(
 
 ## See Also
 
-- [UniversalMarker](UniversalMapMarker.md)
-- [MapProviderProtocol](MapProviderProtocol.md)
-- [UniversalMapViewModel](UniversalMapViewModel.md)
-- [Marker Visibility Management](MarkerVisibilityManagement.md)
+- [UniversalMarker](docsUniversalMapMarker.md)
+- [MapProviderProtocol](docsMapProviderProtocol.md)
+- [UniversalMapViewModel](docsUniversalMapViewModel.md)
+- [Marker Visibility Management](docsMarkerVisibilityManagement.md)

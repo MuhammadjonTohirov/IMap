@@ -150,6 +150,70 @@ Task {
 viewModel.showUserLocation(true)
 ```
 
+## NavigationTrackingCore Quick Integration
+
+Use this when you need production-style route tracking (snapped marker + remaining polyline updates).
+
+```swift
+import MapPack
+import CoreLocation
+
+let trackingConfig = NavigationRouteTrackingConfig(
+    routeSnapThreshold: 80,
+    routeArrivalThreshold: 8,
+    connectorHideThreshold: 1.2,
+    headingSmoothingFactor: 0.28,
+    routeHeadingLookAheadDistance: 12,
+    minReliableCourseSpeed: 2.5,
+    maxHeadingTurnRatePerSecond: 120,
+    serverHeadingMaxAge: 3.0,
+    markerAnimationFallbackDuration: 0.35,
+    markerAnimationMinDuration: 0.15,
+    markerAnimationMaxDuration: 1.0
+)
+
+let headingService = NavigationHeadingComputationService()
+let trackingSession = NavigationRouteTrackingSessionManager(
+    config: trackingConfig,
+    headingService: headingService
+)
+let progressAnimator = NavigationRouteProgressAnimationService()
+var routeGeometry: NavigationRouteProgressGeometry?
+var currentProgress: CLLocationDistance = 0
+```
+
+Configure route once:
+
+```swift
+guard let setup = trackingSession.configureRoute(
+    coordinates: routeCoordinates,
+    currentLocation: currentLocation?.coordinate
+) else { return }
+
+routeGeometry = NavigationRouteProgressGeometry(route: setup.routeCoordinates)
+currentProgress = routeGeometry?.progress(of: setup.initialMarkerCoordinate) ?? 0
+```
+
+Then process location updates:
+
+```swift
+guard let update = trackingSession.handleLocationUpdate(location) else { return }
+
+switch update {
+case .onTrack(let state):
+    // Update marker, remaining polyline, connector polyline.
+    // Use state.markerTransitionDuration to animate progress smoothly.
+    break
+
+case .outOfRoute:
+    // Trigger reroute request and reconfigure the session with new coordinates.
+    break
+}
+```
+
+Detailed guide:
+- [NavigationTrackingCore](docsNavigationTrackingCore.md)
+
 ## Full Example
 
 Here's a complete example with markers, routes, and camera control:
@@ -259,11 +323,11 @@ struct CompleteMapExample: View {
 
 Now that you have the basics, explore more advanced features:
 
-- **[Marker Management](UniversalMapMarker.md)** - Custom markers and interactions
-- **[Route Tracking](RouteTrackingManager.md)** - Track movement along routes
-- **[Styling](StylingGuide.md)** - Customize map appearance
-- **[Interaction Handling](MapInteractionDelegate.md)** - Respond to user actions
-- **[Camera Control](UniversalMapCamera.md)** - Advanced camera animations
+- **[Marker Management](docsUniversalMapMarker.md)** - Custom markers and interactions
+- **[Route Tracking](docsNavigationTrackingCore.md)** - Session-based marker and route tracking
+- **[Low-level Snap Tracking](docsRouteTrackingManager.md)** - Direct route snapping manager
+- **[Interaction Handling](docsMapInteractionDelegate.md)** - Respond to user actions
+- **[Camera Control](docsUniversalMapCamera.md)** - Advanced camera animations
 
 ## Troubleshooting
 

@@ -485,6 +485,6 @@ func createImageMarker(imageURL: URL, coordinate: CLLocationCoordinate2D) async 
 
 ## See Also
 
-- [UniversalMapMarkerProtocol](UniversalMapMarkerProtocol.md)
-- [UniversalMapViewModel](UniversalMapViewModel.md)
-- [Marker Visibility Management](MarkerVisibilityManagement.md)
+- [UniversalMapMarkerProtocol](docsUniversalMapMarkerProtocol.md)
+- [UniversalMapViewModel](docsUniversalMapViewModel.md)
+- [Marker Visibility Management](docsMarkerVisibilityManagement.md)

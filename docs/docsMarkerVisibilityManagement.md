@@ -425,7 +425,7 @@ If experiencing lag with markers:
 
 ## See Also
 
-- [UniversalMapMarker](UniversalMapMarker.md)
-- [UniversalMapViewModel](UniversalMapViewModel.md)
+- [UniversalMapMarker](docsUniversalMapMarker.md)
+- [UniversalMapViewModel](docsUniversalMapViewModel.md)
 - [GoogleMapsProvider](GoogleMapsProvider.md)
 - [Performance Guide](PerformanceGuide.md)

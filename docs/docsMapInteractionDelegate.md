@@ -514,6 +514,6 @@ func mapDidEndDragging(at location: CLLocation) {
 
 ## See Also
 
-- [UniversalMapViewModel](UniversalMapViewModel.md)
+- [UniversalMapViewModel](docsUniversalMapViewModel.md)
 - [UniversalMapViewModelDelegate](UniversalMapViewModelDelegate.md)
-- [MapProviderProtocol](MapProviderProtocol.md)
+- [MapProviderProtocol](docsMapProviderProtocol.md)

@@ -471,6 +471,6 @@ struct MapCameraControls: View {
 
 ## See Also
 
-- [UniversalMapViewModel](UniversalMapViewModel.md)
-- [MapProviderProtocol](MapProviderProtocol.md)
+- [UniversalMapViewModel](docsUniversalMapViewModel.md)
+- [MapProviderProtocol](docsMapProviderProtocol.md)
 - [UniversalMapEdgeInsets](UniversalMapEdgeInsets.md)

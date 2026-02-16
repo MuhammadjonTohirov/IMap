@@ -596,6 +596,6 @@ Sets the address information to display.
 ## See Also
 
 - [UniversalMapViewModelDelegate](UniversalMapViewModelDelegate.md)
-- [MapProviderProtocol](MapProviderProtocol.md)
-- [UniversalMapMarker](UniversalMapMarker.md)
-- [UniversalMapPolyline](UniversalMapPolyline.md)
+- [MapProviderProtocol](docsMapProviderProtocol.md)
+- [UniversalMapMarker](docsUniversalMapMarker.md)
+- [UniversalMapPolyline](docsUniversalMapPolyline.md)
