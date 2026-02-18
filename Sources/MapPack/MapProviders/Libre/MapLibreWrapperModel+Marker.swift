@@ -23,11 +23,9 @@ extension MapLibreWrapperModel {
             return
         }
         
-        UIView.animate(withDuration: 1, delay: 0, options: .curveLinear) {
-            annotation?.updatePosition(coordinate: marker.coordinate, heading: marker.rotation)
-            if let annotation {
-                self.applyMarkerViewRotation(annotation)
-            }
+        annotation?.updatePosition(coordinate: marker.coordinate, heading: marker.rotation)
+        if let annotation {
+            self.applyMarkerViewRotation(annotation)
         }
     }
 }
