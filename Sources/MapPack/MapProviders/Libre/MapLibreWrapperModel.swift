@@ -11,6 +11,7 @@ import MapLibre
 import SwiftUI
 import Combine
 import UIKit
+import CoreLocation
 
 public protocol LibreMapsKeyProvider: UniversalMapConfigProtocol, AnyObject {
     
@@ -287,18 +288,14 @@ extension MapLibreWrapperModel {
     func addMarker(_ marker: any UniversalMapMarkerProtocol) {
         guard let marker = marker as? UniversalMarker else { return }
         
+        removeMarkerAnnotations(withId: marker.id)
         Logging.l("Add marker to map view by id: \(marker.id)")
         markers[marker.id] = marker
         addMarkerToMap(marker)
     }
     
     func removeMarker(withId id: String) {
-        guard let mapView = mapView else { return }
-        
-        if let annotation = mapView.annotations?.first(where: { ($0 as? UniversalMarker)?.id == id }) {
-            Logging.l("Remove marker from map view by id: \(id)")
-            mapView.removeAnnotation(annotation)
-        }
+        removeMarkerAnnotations(withId: id)
         
         markers.removeValue(forKey: id)
     }
@@ -317,11 +314,57 @@ extension MapLibreWrapperModel {
         guard let mapView = mapView else { return }
         mapView.addAnnotation(marker)
         marker.updatePosition(coordinate: marker.coordinate, heading: marker.rotation)
-        marker.view?.transform = CGAffineTransform(rotationAngle: (.pi / 180) * CGFloat(marker.rotation))
+        applyMarkerViewRotation(marker)
+    }
+
+    private func removeMarkerAnnotations(withId id: String) {
+        guard let mapView = mapView else { return }
+
+        let annotationsToRemove = (mapView.annotations ?? []).filter { annotation in
+            (annotation as? UniversalMarker)?.id == id
+        }
+
+        guard !annotationsToRemove.isEmpty else { return }
+
+        Logging.l("Remove marker(s) from map view by id: \(id), count=\(annotationsToRemove.count)")
+        mapView.removeAnnotations(annotationsToRemove)
     }
     
     func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {
         self.mapView?.setVisibleCoordinates(coordinates, count: UInt(coordinates.count), edgePadding: edges, animated: animated)
+    }
+}
+
+extension MapLibreWrapperModel {
+    func refreshAllMarkerViewRotations() {
+        markers.values.forEach { marker in
+            applyMarkerViewRotation(marker)
+        }
+    }
+    
+    func applyMarkerViewRotation(_ marker: UniversalMarker) {
+        marker.view?.transform = CGAffineTransform(
+            rotationAngle: markerViewRotationAngle(for: marker)
+        )
+    }
+    
+    private func markerViewRotationAngle(for marker: UniversalMarker) -> CGFloat {
+        let markerHeading = marker.rotation
+        
+        guard marker.compensatesForMapBearing else {
+            return (.pi / 180) * CGFloat(normalizedHeading(markerHeading))
+        }
+        
+        let mapBearing = mapView?.camera.heading ?? 0
+        let displayHeading = normalizedHeading(markerHeading - mapBearing)
+        return (.pi / 180) * CGFloat(displayHeading)
+    }
+    
+    private func normalizedHeading(_ value: CLLocationDirection) -> CLLocationDirection {
+        var angle = value.truncatingRemainder(dividingBy: 360)
+        if angle > 180 { angle -= 360 }
+        if angle < -180 { angle += 360 }
+        return angle
     }
 }
 

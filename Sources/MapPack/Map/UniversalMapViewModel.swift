@@ -42,29 +42,64 @@ public struct AddressInfo {
 
 /// View model for the Universal Map
 public class UniversalMapViewModel: ObservableObject {
-    // Published properties
+    // MARK: - Components
+    @Published public var uiState = MapUIState()
+    public let locationTrackingManager = LocationTrackingManager()
+    public let routeSessionManager = RouteSessionManager()
+    
+    // MARK: - Published Properties (Backward Compatibility / Facade)
     @Published public var mapProvider: MapProvider
     @Published public var camera: UniversalMapCamera?
-    @Published public var showUserLocation: Bool = true
-    @Published public var userTrackingMode: Bool = false
-    @Published public var edgeInsets = UniversalMapEdgeInsets()
-    @Published public var addressInfo: AddressInfo?
     
-    public private(set) var hasAddressPicker: Bool = true
-    public private(set) var hasAddressView: Bool = true
-    
-    public private(set) var defaultZoomLevel: Double = 17
-    var pinViewBottomOffset: CGFloat {
-        let sarea = UIApplication.shared.safeArea
-        let bottomOffset = self.edgeInsets.insets.bottom - sarea.top
-        
-        return bottomOffset
+    public var showUserLocation: Bool {
+        get { uiState.showUserLocation }
+        set {
+            uiState.showUserLocation = newValue
+            mapProviderInstance.showUserLocation(newValue)
+        }
     }
     
-    public private(set) var config: any MapConfigProtocol
+    public var userTrackingMode: Bool {
+        get { uiState.userTrackingMode }
+        set {
+            uiState.userTrackingMode = newValue
+            mapProviderInstance.setUserTrackingMode(newValue)
+        }
+    }
     
+    public var edgeInsets: UniversalMapEdgeInsets {
+        get { uiState.edgeInsets }
+        set {
+            uiState.edgeInsets = newValue
+            mapProviderInstance.setEdgeInsets(newValue)
+        }
+    }
+    
+    public var addressInfo: AddressInfo? {
+        get { uiState.addressInfo }
+        set { uiState.addressInfo = newValue }
+    }
+    
+    public var hasAddressPicker: Bool {
+        uiState.hasAddressPicker
+    }
+    
+    public var hasAddressView: Bool {
+        uiState.hasAddressView
+    }
+    
+    public var pinViewBottomOffset: CGFloat {
+        uiState.pinViewBottomOffset
+    }
+    
+    public var pinModel: PinViewModel {
+        uiState.pinModel
+    }
+    
+    public private(set) var defaultZoomLevel: Double = 17
+    public private(set) var config: any MapConfigProtocol
     public private(set) weak var delegate: UniversalMapViewModelDelegate?
-    public private(set) var pinModel: PinViewModel = .init()
+    
     // Private properties
     public private(set) var mapProviderInstance: MapProviderProtocol
     
@@ -78,25 +113,34 @@ public class UniversalMapViewModel: ObservableObject {
     
     private var polylinesById: [String: UniversalMapPolyline] = [:]
     private var cancellables = Set<AnyCancellable>()
-    private var routeTracker: RouteTrackingManager?
-    private var currentTrackedPolyline: UniversalMapPolyline?
     
     // MARK: - Initialization
     
-    /// Initialize with a specific map provider
-    public init(mapProvider: MapProvider, config: any MapConfigProtocol) {
-        self.mapProvider = mapProvider
-        self.mapProviderInstance = MapProviderFactory.createMapProvider(type: mapProvider)
+    /// Initialize with a specific map provider instance (Dependency Injection)
+    public init(instance: MapProviderProtocol, providerType: MapProvider, config: any MapConfigProtocol) {
+        self.mapProvider = providerType
+        self.mapProviderInstance = instance
         self.config = config
         
         self.set(config: config)
+        
+        // Setup Managers
+        self.locationTrackingManager.setMapProvider(instance)
+        self.locationTrackingManager.setDefaultZoomLevel(defaultZoomLevel)
+        self.routeSessionManager.setMapProvider(instance)
 
         // Set up delegation
         self.mapProviderInstance.setInteractionDelegate(self)
+        self.locationTrackingManager.setDelegate(self)
         
-
         // Initialize the map provider with initial configuration
         self.updateMapProviderConfiguration()
+    }
+
+    /// Convenience initializer using the factory
+    public convenience init(mapProvider: MapProvider, config: any MapConfigProtocol) {
+        let instance = MapProviderFactory.createMapProvider(type: mapProvider)
+        self.init(instance: instance, providerType: mapProvider, config: config)
     }
     
     deinit {
@@ -124,6 +168,10 @@ public class UniversalMapViewModel: ObservableObject {
         // Create new provider instance
         mapProviderInstance = MapProviderFactory.createMapProvider(type: provider)
         
+        // Update Managers
+        locationTrackingManager.setMapProvider(mapProviderInstance)
+        routeSessionManager.setMapProvider(mapProviderInstance)
+        
         // Set delegation
         mapProviderInstance.setInteractionDelegate(self)
         
@@ -148,8 +196,7 @@ public class UniversalMapViewModel: ObservableObject {
     
     /// Show or hide the user's location
     public func showUserLocation(_ show: Bool) {
-        self.showUserLocation = show
-        mapProviderInstance.showUserLocation(show)
+        self.showUserLocation = show // Goes through setter updating uiState and provider
     }
     
     public func showBuildings(_ show: Bool) {
@@ -158,20 +205,19 @@ public class UniversalMapViewModel: ObservableObject {
     
     /// Enable or disable user tracking mode
     public func setUserTrackingMode(_ tracking: Bool) {
-        self.userTrackingMode = tracking
-        mapProviderInstance.setUserTrackingMode(tracking)
+        self.userTrackingMode = tracking // Goes through setter
     }
     
     /// Set the map edge insets
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
-        self.edgeInsets = insets
-        mapProviderInstance.setEdgeInsets(insets)
+        self.edgeInsets = insets // Goes through setter
     }
     
     /// Add a marker to the map
     @discardableResult
     public func addMarker(_ marker: any UniversalMapMarkerProtocol) -> String {
         mapProviderInstance.addMarker(marker)
+        locationTrackingManager.handleMarkerUpdate(marker)
         return marker.id
     }
     
@@ -181,6 +227,7 @@ public class UniversalMapViewModel: ObservableObject {
     
     public func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
         mapProviderInstance.updateMarker(marker)
+        locationTrackingManager.handleMarkerUpdate(marker)
     }
     
     /// Remove a marker from the map
@@ -282,16 +329,16 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     public func set(hasAddressPicker: Bool) {
-        self.hasAddressPicker = hasAddressPicker
+        uiState.hasAddressPicker = hasAddressPicker
     }
     
     public func set(hasAddressView: Bool) {
-        self.hasAddressView = hasAddressView
+        uiState.hasAddressView = hasAddressView
     }
     
     @MainActor
     public func set(addressViewInfo: AddressInfo?) {
-        self.addressInfo = addressViewInfo
+        uiState.addressInfo = addressViewInfo
     }
     
     @MainActor
@@ -338,12 +385,8 @@ public class UniversalMapViewModel: ObservableObject {
     // MARK: - Route Tracking
     
     /// Starts tracking a driver along the provided route.
-    /// This initializes the tracking manager with the full polyline.
     public func startTracking(route: UniversalMapPolyline) {
-        self.currentTrackedPolyline = route
-        self.routeTracker = RouteTrackingManager(routeCoordinates: route.coordinates)
-        // Ensure the route is visible on the map
-        self.addPolyline(route)
+        routeSessionManager.startTracking(route: route)
     }
     
     // MARK: - Private Methods
@@ -355,9 +398,9 @@ public class UniversalMapViewModel: ObservableObject {
             mapProviderInstance.updateCamera(to: camera)
         }
         
-        mapProviderInstance.showUserLocation(showUserLocation)
-        mapProviderInstance.setUserTrackingMode(userTrackingMode)
-        mapProviderInstance.setEdgeInsets(edgeInsets)
+        mapProviderInstance.showUserLocation(uiState.showUserLocation)
+        mapProviderInstance.setUserTrackingMode(uiState.userTrackingMode)
+        mapProviderInstance.setEdgeInsets(uiState.edgeInsets)
         
         // Re-add all markers
         for marker in markersById.values {
@@ -367,6 +410,27 @@ public class UniversalMapViewModel: ObservableObject {
         // Re-add all polylines
         for polyline in polylines {
             mapProviderInstance.addPolyline(polyline, animated: false)
+        }
+    }
+}
+
+// MARK: - LocationTrackingDelegate Implementation
+extension UniversalMapViewModel: LocationTrackingDelegate {
+    public func trackingDidStart(mode: MapTrackingMode) {
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
+    public func trackingDidStop() {
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+    
+    public func trackingDidFail(error: Error) {
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
         }
     }
 }
@@ -397,5 +461,64 @@ extension UniversalMapViewModel: MapInteractionDelegate {
     
     public func mapDidLoaded() {
         self.delegate?.mapDidLoaded(map: self.mapProviderInstance)
+    }
+}
+
+// MARK: - Location Tracking Methods (Restored)
+public extension UniversalMapViewModel {
+    
+    /// Current tracking mode
+    var trackingMode: MapTrackingMode {
+        locationTrackingManager.trackingMode
+    }
+    
+    /// Whether location tracking is active
+    var isLocationTrackingActive: Bool {
+        locationTrackingManager.isTrackingActive
+    }
+    
+    /// Current tracked location
+    var trackedLocation: CLLocation? {
+        locationTrackingManager.currentLocation
+    }
+    
+    /// Start tracking current location with camera following
+    /// - Parameter zoom: Optional zoom level (uses default if nil)
+    @MainActor
+    func trackCurrentLocationOnMap(zoom: Double? = nil) {
+        locationTrackingManager.trackCurrentLocationOnMap(zoom: zoom)
+    }
+    
+    /// Start tracking a specific marker with camera following
+    /// - Parameters:
+    ///   - markerId: ID of the marker to track
+    ///   - zoom: Optional zoom level (uses default if nil)
+    func trackMarker(_ markerId: String, zoom: Double? = nil) {
+        locationTrackingManager.trackMarker(markerId, zoom: zoom)
+    }
+    
+    /// Stop all location and marker tracking
+    func stopTracking() {
+        locationTrackingManager.stopTracking()
+    }
+    
+    /// Enhanced addMarker that notifies tracking manager
+    @discardableResult
+    func addMarkerWithTracking(_ marker: any UniversalMapMarkerProtocol) -> String {
+        let markerId = addMarker(marker)
+        // Note: addMarker already calls handleMarkerUpdate in the new implementation,
+        // but explicit call here is safe (idempotent usually)
+        return markerId
+    }
+    
+    /// Enhanced marker update for active tracking scenarios.
+    func updateTrackedMarker(_ marker: any UniversalMapMarkerProtocol) {
+        updateMarker(marker)
+    }
+    
+    /// Enhanced setMapProvider that updates tracking
+    func setMapProviderWithTracking(_ provider: MapProvider, input: any MapConfigProtocol) {
+        setMapProvider(provider, config: input)
+        // Managers are already updated in setMapProvider
     }
 }
