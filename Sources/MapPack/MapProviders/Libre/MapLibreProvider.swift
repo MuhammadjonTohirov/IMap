@@ -85,14 +85,17 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.viewModel.set(preferredRefreshRate: preferredRefreshRate)
     }
     
-    public func setUserLocationIcon(_ image: UIImage, scale: CGFloat) {
+    public func setUserLocationIcon(_ image: UIImage?, scale: CGFloat) {
         viewModel.userLocationImage = image
         viewModel.userLocationIconScale = scale
-        // Trigger a refresh if needed, but typically MapLibre asks for view when location updates or map moves.
-        // We might need to force a refresh of user location annotation.
+
+        if image == nil {
+            showUserLocationAccuracy(false)
+        }
+
+        // Trigger a refresh so MapLibre re-requests the annotation view
         if let userLocation = viewModel.mapView?.userLocation {
             viewModel.mapView?.removeAnnotation(userLocation)
-            // showsUserLocation toggle might force re-add
             if showsUserLocation {
                 viewModel.mapView?.showsUserLocation = false
                 viewModel.mapView?.showsUserLocation = true

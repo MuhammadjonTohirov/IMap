@@ -89,7 +89,7 @@ public protocol MapUserLocationDisplayable: AnyObject {
     /// Enable or disable user tracking mode
     func setUserTrackingMode(_ tracking: Bool)
     
-    func setUserLocationIcon(_ image: UIImage, scale: CGFloat)
+    func setUserLocationIcon(_ image: UIImage?, scale: CGFloat)
     
     func updateUserLocation(_ location: CLLocation)
     
@@ -182,7 +182,7 @@ public extension MapProviderProtocol {
 }
 
 public extension MapUserLocationDisplayable {
-    func setUserLocationIcon(_ image: UIImage, scale: CGFloat) {}
+    func setUserLocationIcon(_ image: UIImage?, scale: CGFloat) {}
     
     func updateUserLocation(_ location: CLLocation) {}
     
