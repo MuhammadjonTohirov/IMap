@@ -140,9 +140,15 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         }
     }
     
-    public func setUserLocationIcon(_ image: UIImage, scale: CGFloat) {
+    public func setUserLocationIcon(_ image: UIImage?, scale: CGFloat) {
         self.userLocationImage = image
         self.userLocationIconScale = scale
+
+        if image == nil {
+            showUserLocationAccuracy(false)
+            viewModel.removeMarker(id: userLocationMarkerId)
+        }
+
         self.showUserLocation(self.shouldShowUserLocation)
     }
     

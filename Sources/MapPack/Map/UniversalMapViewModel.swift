@@ -368,7 +368,7 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     @MainActor
-    public func set(userLocationIcon: UIImage, scale: CGFloat = 1.0) {
+    public func set(userLocationIcon: UIImage?, scale: CGFloat = 1.0) {
         mapProviderInstance.setUserLocationIcon(userLocationIcon, scale: scale)
     }
     
