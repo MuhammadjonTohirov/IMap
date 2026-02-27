@@ -74,6 +74,10 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     // MARK: - Camera helpers
     
     func focusTo(coordinate: CLLocationCoordinate2D, zoom: Float = 15, viewAngle: Double = 0, animate: Bool = true) {
+        if coordinate.latitude == 0 || coordinate.longitude == 0 {
+            return
+        }
+        
         if animate {
             mapView?.animate(to: GMSCameraPosition(target: coordinate, zoom: zoom, bearing: 0, viewingAngle: viewAngle))
         } else {

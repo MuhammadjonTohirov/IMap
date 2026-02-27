@@ -131,6 +131,9 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     // MARK: - Custom Methods
     
     func centerMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
+        if coordinate.latitude == 0.0 || coordinate.longitude == 0.0 {
+            return
+        }
         
         let perform = { [weak self] in
             guard let self = self, let mapView = self.mapView else { return }
