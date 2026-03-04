@@ -37,9 +37,15 @@ struct MapLibreMapView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             guard let mapView = viewModel.mapView else { return }
 
-            // Re-apply tracking mode if it was lost during background transition
-            if let mode = trackingMode, mapView.userTrackingMode != mode {
-                mapView.userTrackingMode = mode
+            // Toggle to refresh location manager
+            if showsUserLocation {
+                mapView.showsUserLocation = false
+                mapView.showsUserLocation = true
+
+                // Re-apply tracking mode if it was lost during the permission change
+                if let mode = trackingMode {
+                    mapView.userTrackingMode = mode
+                }
             }
         }
         .onAppear {

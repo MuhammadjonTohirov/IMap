@@ -94,19 +94,21 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         }
 
         // Update existing annotation view directly to avoid resetting MLNUserLocation position
-        if let mapView = viewModel.mapView,
+        if let image,
+           let mapView = viewModel.mapView,
            let userLocation = mapView.userLocation,
            let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView {
-            if let image {
-                view.setup(image: image, scale: scale)
-            }
+            view.setup(image: image, scale: scale)
             return
         }
 
-        // No existing view yet — toggle to trigger initial view creation
-        if showsUserLocation, viewModel.mapView != nil {
-            viewModel.mapView?.showsUserLocation = false
-            viewModel.mapView?.showsUserLocation = true
+        // No existing view, or clearing the icon — toggle to trigger view re-creation
+        if let userLocation = viewModel.mapView?.userLocation {
+            viewModel.mapView?.removeAnnotation(userLocation)
+            if showsUserLocation {
+                viewModel.mapView?.showsUserLocation = false
+                viewModel.mapView?.showsUserLocation = true
+            }
         }
     }
     
@@ -224,14 +226,12 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func showUserLocationAccuracy(_ show: Bool) {
+        viewModel.isAccuracyCircleHidden = !show
+
         if let mapView = viewModel.mapView,
            let userLocationAnnotation = mapView.userLocation,
            let view = mapView.view(for: userLocationAnnotation) as? UniversalUserLocationAnnotationView {
             view.setCircleHidden(!show)
-            // Trigger layout update
-            if show {
-                view.updateZoom(mapView.zoomLevel)
-            }
         }
     }
     

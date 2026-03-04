@@ -16,7 +16,7 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
     
     private var lastAccuracy: CLLocationAccuracy = 0
     private var lastLatitude: CLLocationDegrees = 0
-    private var isCircleHidden: Bool = false
+    private var isCircleHidden: Bool = true
     
     override init(annotation: MLNAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
@@ -66,10 +66,6 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
         updateLayout(zoom: zoom)
     }
     
-    func updateZoom(_ zoom: Double) {
-        updateLayout(zoom: zoom)
-    }
-    
     private func updateLayout(zoom: Double) {
         if isCircleHidden { return }
         
@@ -105,10 +101,6 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
 extension MapLibreWrapperModel: MLNMapViewDelegate {
     
     public func mapView(_ mapView: MLNMapView, regionIsChangingWith reason: MLNCameraChangeReason) {
-         if let userLocationAnnotation = mapView.userLocation,
-           let view = mapView.view(for: userLocationAnnotation) as? UniversalUserLocationAnnotationView {
-             view.updateZoom(mapView.zoomLevel)
-        }
         refreshAllMarkerViewRotations()
     }
     
@@ -189,12 +181,13 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
             }
             
             view?.setup(image: image, scale: userLocationIconScale)
-            
+            view?.setCircleHidden(isAccuracyCircleHidden)
+
             // Initial update if location is known
             if let userLoc = annotation as? MLNUserLocation, let location = userLoc.location {
                 view?.update(accuracy: location.horizontalAccuracy, zoom: mapView.zoomLevel, latitude: location.coordinate.latitude)
             }
-            
+
             return view
         }
         

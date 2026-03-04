@@ -36,6 +36,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     // User Location Customization
     public var userLocationImage: UIImage?
     public var userLocationIconScale: CGFloat = 1.0
+    public var isAccuracyCircleHidden: Bool = true
     
     public var config: (any UniversalMapConfigProtocol)?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
