@@ -66,7 +66,8 @@ extension LocationTrackingManager {
     @MainActor
     public func handleLocationUpdateSmooth(_ location: CLLocation) {
         self.currentLocation = location
-        
+        mapProvider?.updateUserLocation(location)
+
         if case .currentLocation = trackingMode {
             updateCameraForCurrentLocationSmooth(location)
         }

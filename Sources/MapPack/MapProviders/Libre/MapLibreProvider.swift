@@ -93,13 +93,20 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
             showUserLocationAccuracy(false)
         }
 
-        // Trigger a refresh so MapLibre re-requests the annotation view
-        if let userLocation = viewModel.mapView?.userLocation {
-            viewModel.mapView?.removeAnnotation(userLocation)
-            if showsUserLocation {
-                viewModel.mapView?.showsUserLocation = false
-                viewModel.mapView?.showsUserLocation = true
+        // Update existing annotation view directly to avoid resetting MLNUserLocation position
+        if let mapView = viewModel.mapView,
+           let userLocation = mapView.userLocation,
+           let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView {
+            if let image {
+                view.setup(image: image, scale: scale)
             }
+            return
+        }
+
+        // No existing view yet — toggle to trigger initial view creation
+        if showsUserLocation, viewModel.mapView != nil {
+            viewModel.mapView?.showsUserLocation = false
+            viewModel.mapView?.showsUserLocation = true
         }
     }
     
