@@ -174,14 +174,8 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func removePolyline(withId id: String) {
-        if polylines[id] != nil {
-            // Find the MapLibre polyline with matching ID
-            if let index = viewModel.savedPolylines.firstIndex(where: { $0.id == id }) {
-                // Remove it
-                viewModel.savedPolylines.remove(at: index)
-                polylines.removeValue(forKey: id)
-            }
-        }
+        viewModel.removePolyline(id: id)
+        polylines.removeValue(forKey: id)
     }
     
     public func clearAllPolylines() {
