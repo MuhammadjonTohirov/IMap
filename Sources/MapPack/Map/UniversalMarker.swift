@@ -19,6 +19,9 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
     public let view: UIView?
     public private(set) var compensatesForMapBearing: Bool = false
     public private(set) var worldHeading: CLLocationDirection = 0
+    /// Last rotation angle (radians) applied to `view.transform`, cached to skip redundant
+    /// per-frame CALayer writes. `nil` until the first application so the first write always runs.
+    var lastAppliedViewRotation: CGFloat?
     
     public init(
         id: String? = nil,

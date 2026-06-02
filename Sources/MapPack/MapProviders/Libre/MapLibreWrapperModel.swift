@@ -347,9 +347,12 @@ extension MapLibreWrapperModel {
     }
     
     func applyMarkerViewRotation(_ marker: UniversalMarker) {
-        marker.view?.transform = CGAffineTransform(
-            rotationAngle: markerViewRotationAngle(for: marker)
-        )
+        let angle = markerViewRotationAngle(for: marker)
+        if let last = marker.lastAppliedViewRotation, abs(angle - last) <= 0.0001 {
+            return
+        }
+        marker.view?.transform = CGAffineTransform(rotationAngle: angle)
+        marker.lastAppliedViewRotation = angle
     }
     
     private func markerViewRotationAngle(for marker: UniversalMarker) -> CGFloat {
