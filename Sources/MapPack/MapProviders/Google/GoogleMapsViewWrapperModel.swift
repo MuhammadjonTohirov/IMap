@@ -37,8 +37,16 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     public private(set) var polylines: [String: GMSPolyline] = [:]
     
     public private(set) var config: GoogleMapsConfigProtocol?
-    
+
     private var didAppear: Bool = false
+
+    /// Last camera bearing for which rendered-marker rotations were refreshed; lets us
+    /// skip redundant per-frame rotation work when the bearing has not changed.
+    private var lastRenderedMarkerBearing: CLLocationDirection?
+
+    /// Parsed map styles cached by their JSON source to avoid re-parsing on every
+    /// color-scheme change.
+    private var cachedMapStyles: [String: GMSMapStyle] = [:]
     
     func onAppear() {
         if didAppear {
@@ -150,10 +158,23 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         
         switch scheme {
         case .dark:
-            self.mapView?.mapStyle = try? .init(jsonString: self.config?.darkStyle ?? GoogleDarkMapStyle().source)
+            self.mapView?.mapStyle = mapStyle(forJSON: self.config?.darkStyle ?? GoogleDarkMapStyle().source)
         default:
-            self.mapView?.mapStyle = try? .init(jsonString: self.config?.lightStyle ?? GoogleLightMapStyle().source)
+            self.mapView?.mapStyle = mapStyle(forJSON: self.config?.lightStyle ?? GoogleLightMapStyle().source)
         }
+    }
+
+    /// Returns a parsed `GMSMapStyle` for the given JSON, caching the result so the
+    /// same style is parsed at most once.
+    private func mapStyle(forJSON json: String) -> GMSMapStyle? {
+        if let cached = cachedMapStyles[json] {
+            return cached
+        }
+        guard let style = try? GMSMapStyle(jsonString: json) else {
+            return nil
+        }
+        cachedMapStyles[json] = style
+        return style
     }
     
     // MARK: - Visibility management
@@ -198,6 +219,31 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
                 marker.map = mapView
                 markers[id] = marker
             }
+        }
+    }
+
+    /// Updates a single marker's rendered state against the current viewport. Cheaper
+    /// than `refreshVisibleMarkers()` when only one marker moved, since moving one
+    /// marker cannot change another marker's visibility.
+    func refreshVisibility(for marker: UniversalMarker) {
+        guard let mapView = mapView else { return }
+
+        let region = mapView.projection.visibleRegion()
+        let bounds = GMSCoordinateBounds(coordinate: region.nearLeft, coordinate: region.farRight)
+            .includingCoordinate(region.nearRight)
+            .includingCoordinate(region.farLeft)
+
+        let id = marker.id
+        let isVisible = bounds.contains(marker.position)
+        let isRendered = markers[id] != nil
+
+        if isVisible, !isRendered {
+            applyRenderedMarkerRotation(marker)
+            marker.map = mapView
+            markers[id] = marker
+        } else if !isVisible, isRendered {
+            marker.map = nil
+            markers[id] = nil
         }
     }
 }
@@ -296,15 +342,21 @@ public extension GoogleMapsViewWrapperModel {
         let id = marker.id
         // Update the data source entry if it exists
         if let existing = allMarkers[id] {
+            // Skip re-emitted identical fixes: avoids redundant marker writes and a
+            // full viewport rescan.
+            if existing.coordinate == marker.coordinate, existing.worldHeading == marker.worldHeading {
+                return
+            }
             existing.set(coordinate: marker.coordinate)
             existing.set(heading: marker.worldHeading)
             applyRenderedMarkerRotation(existing)
+            // Moving one marker only changes its own visibility.
+            refreshVisibility(for: existing)
         } else {
             // If not present, add it to the data source
             allMarkers[id] = marker
+            refreshVisibleMarkers()
         }
-        // Re-evaluate visibility after position changes
-        refreshVisibleMarkers()
     }
     
     // MARK: - Polyline management
@@ -387,11 +439,10 @@ public extension GoogleMapsViewWrapperModel {
         activePolylineAnimations[id]?.invalidate()
         activePolylineAnimations[id] = nil
         
-        let path = GMSMutablePath()
-        coordinates.forEach { path.add($0) }
-        
+        let path = coordinates.gmsPath()
+
         if animated {
-            // Reuse animation logic for updates? 
+            // Reuse animation logic for updates?
             // The user requested animation for "drawing".
             // If we update coordinates, we treat it as a redraw from start if animated is true.
             let emptyPath = GMSMutablePath()
@@ -416,9 +467,8 @@ public extension GoogleMapsViewWrapperModel {
         activePolylineAnimations[id]?.invalidate()
         activePolylineAnimations[id] = nil
         
-        let path = GMSMutablePath()
-        newPolyline.coordinates.forEach { path.add($0) }
-        
+        let path = newPolyline.coordinates.gmsPath()
+
         polyline.strokeColor = newPolyline.color
         polyline.strokeWidth = newPolyline.width
         polyline.geodesic = newPolyline.geodesic
@@ -460,7 +510,15 @@ public extension GoogleMapsViewWrapperModel {
 
 private extension GoogleMapsViewWrapperModel {
     func refreshAllRenderedMarkerRotations() {
-        markers.values.forEach { marker in
+        // Only compensating markers change their displayed angle as the camera bearing
+        // moves; skip the whole pass when the bearing is unchanged.
+        let bearing = CLLocationDirection(mapView?.camera.bearing ?? 0)
+        if let last = lastRenderedMarkerBearing, abs(bearing - last) <= 0.0001 {
+            return
+        }
+        lastRenderedMarkerBearing = bearing
+
+        for marker in markers.values where marker.compensatesForMapBearing {
             applyRenderedMarkerRotation(marker)
         }
     }
@@ -486,22 +544,20 @@ private extension GoogleMapsViewWrapperModel {
 
 extension UniversalMapPolyline {
     func gmsPolyline(isCarLine: Bool = true) -> GMSPolyline {
-        let polyline: UniversalMapPolyline = self
-        let path = GMSMutablePath()
-
-        for location in polyline.coordinates {
-            path.add(location)
-        }
-        
-        let gmsPolyline = GMSPolyline(path: path)
-        
-        let lineColor: UIColor = polyline.color
-        
-        gmsPolyline.accessibilityLabel = polyline.id
-        gmsPolyline.strokeColor = lineColor
-        gmsPolyline.strokeWidth = polyline.width
-        gmsPolyline.geodesic = polyline.geodesic
-        
+        let gmsPolyline = GMSPolyline(path: coordinates.gmsPath())
+        gmsPolyline.accessibilityLabel = id
+        gmsPolyline.strokeColor = color
+        gmsPolyline.strokeWidth = width
+        gmsPolyline.geodesic = geodesic
         return gmsPolyline
+    }
+}
+
+extension Array where Element == CLLocationCoordinate2D {
+    /// Builds a `GMSMutablePath` containing these coordinates in order.
+    func gmsPath() -> GMSMutablePath {
+        let path = GMSMutablePath()
+        forEach { path.add($0) }
+        return path
     }
 }

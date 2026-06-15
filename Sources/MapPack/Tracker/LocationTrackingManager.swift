@@ -13,7 +13,6 @@ public class LocationTrackingManager: NSObject, ObservableObject {
     
     // MARK: - Private Properties
     private let locationManager = CLLocationManager()
-    private var cancellables = Set<AnyCancellable>()
     private(set) weak var mapProvider: MapProviderProtocol?
     private(set) weak var delegate: LocationTrackingDelegate?
     
@@ -24,7 +23,15 @@ public class LocationTrackingManager: NSObject, ObservableObject {
     private(set) var markerFollowMode: MarkerFollowMode = .northUp
     private(set) var markerFollowPitch: Double = 0
     private(set) var markerFollowAnimationDuration: TimeInterval?
-    
+
+    // MARK: - Location Update Throttling
+    /// Timestamp of the last applied location update; drives time-based throttling.
+    private var lastThrottledLocationUpdate: Date?
+    /// Minimum interval between throttled camera updates.
+    private let locationUpdateThrottleInterval: TimeInterval = 0.5
+    /// Distance (meters) that forces an immediate update regardless of the interval.
+    private let locationUpdateDistanceThreshold: CLLocationDistance = 5
+
     // MARK: - Initialization
     public override init() {
         super.init()
@@ -211,7 +218,26 @@ extension LocationTrackingManager: LocationTrackingProtocol {
             updateCameraForCurrentLocation(location)
         }
     }
-    
+
+    /// Throttles raw location-manager updates so the follow camera is not moved more
+    /// often than necessary, then forwards to the canonical `handleLocationUpdate`.
+    ///
+    /// An update is applied when the throttle interval has elapsed, when this is the
+    /// first fix, or when the device moved past `locationUpdateDistanceThreshold`.
+    @MainActor
+    func handleLocationUpdateThrottled(_ location: CLLocation) {
+        let now = Date()
+        let elapsed = lastThrottledLocationUpdate.map { now.timeIntervalSince($0) } ?? .greatestFiniteMagnitude
+        let movedFarEnough = currentLocation.map {
+            location.distance(from: $0) >= locationUpdateDistanceThreshold
+        } ?? true
+
+        guard elapsed >= locationUpdateThrottleInterval || movedFarEnough else { return }
+
+        lastThrottledLocationUpdate = now
+        handleLocationUpdate(location)
+    }
+
     public func handleMarkerUpdate(_ marker: any UniversalMapMarkerProtocol) {
         if case .marker(let id, _) = trackingMode, id == marker.id {
             updateCameraForMarker(marker.id)

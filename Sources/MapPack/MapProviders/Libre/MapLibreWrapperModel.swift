@@ -55,7 +55,11 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     // Animation state
     var activePolylineAnimations: [String: Timer] = [:]
-    
+
+    /// Last map bearing for which marker-view rotations were refreshed, used to skip
+    /// redundant per-frame work when the bearing has not changed.
+    private var lastMarkerViewBearing: CLLocationDirection?
+
     // MARK: - Readiness management
     
     private var pendingCameraActions: [() -> Void] = []
@@ -307,10 +311,8 @@ extension MapLibreWrapperModel {
     func clearAllMarkers() {
         guard let mapView = mapView else { return }
 
-        mapView.annotations?.forEach { annotation in
-            mapView.removeAnnotation(annotation)
-        }
-        
+        // Remove only our markers, leaving the user-location annotation intact.
+        mapView.removeAnnotations(Array(markers.values))
         markers.removeAll()
     }
     
@@ -322,16 +324,12 @@ extension MapLibreWrapperModel {
     }
 
     private func removeMarkerAnnotations(withId id: String) {
-        guard let mapView = mapView else { return }
+        // The annotation we added is the instance stored in `markers`, so remove it
+        // directly instead of scanning every annotation on the map.
+        guard let mapView = mapView, let annotation = markers[id] else { return }
 
-        let annotationsToRemove = (mapView.annotations ?? []).filter { annotation in
-            (annotation as? UniversalMarker)?.id == id
-        }
-
-        guard !annotationsToRemove.isEmpty else { return }
-
-        Logging.l("Remove marker(s) from map view by id: \(id), count=\(annotationsToRemove.count)")
-        mapView.removeAnnotations(annotationsToRemove)
+        Logging.l("Remove marker from map view by id: \(id)")
+        mapView.removeAnnotation(annotation)
     }
     
     func focusOn(coordinates: [CLLocationCoordinate2D], edges: UIEdgeInsets, animated: Bool) {
@@ -341,7 +339,15 @@ extension MapLibreWrapperModel {
 
 extension MapLibreWrapperModel {
     func refreshAllMarkerViewRotations() {
-        markers.values.forEach { marker in
+        // Only markers that compensate for the map bearing change their displayed
+        // angle when the camera moves; others are refreshed on their own update.
+        let bearing = mapView?.camera.heading ?? 0
+        if let last = lastMarkerViewBearing, abs(bearing - last) <= 0.0001 {
+            return
+        }
+        lastMarkerViewBearing = bearing
+
+        for marker in markers.values where marker.compensatesForMapBearing {
             applyMarkerViewRotation(marker)
         }
     }

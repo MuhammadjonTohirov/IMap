@@ -36,6 +36,6 @@ extension Data {
     }
     
     func asObject<T: Decodable>(type: T.Type) -> T? {
-        try? JSONDecoder().decode(T.self, from: self)
+        try? JSONCoders.decoder.decode(T.self, from: self)
     }
 }

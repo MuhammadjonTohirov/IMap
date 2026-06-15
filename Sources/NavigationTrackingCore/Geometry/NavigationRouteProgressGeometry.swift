@@ -8,19 +8,23 @@ public struct NavigationRouteProgressGeometry {
     public let totalDistance: CLLocationDistance
 
     public init(route: [CLLocationCoordinate2D]) {
-        self.route = route
-        self.routePoints = route.map(MKMapPoint.init)
+        // The route is immutable, so compact consecutive duplicate points once here
+        // rather than on every per-frame `remainingRoute(from:)` call.
+        let compacted = Self.compactConsecutive(route)
+        let points = compacted.map(MKMapPoint.init)
 
         var cumulative: [CLLocationDistance] = [0]
         var total: CLLocationDistance = 0
 
-        if route.count > 1 {
-            for index in 1..<route.count {
-                total += route[index - 1].distance(to: route[index])
+        if points.count > 1 {
+            for index in 1..<points.count {
+                total += points[index - 1].distance(to: points[index])
                 cumulative.append(total)
             }
         }
 
+        self.route = compacted
+        self.routePoints = points
         self.cumulativeDistances = cumulative
         self.totalDistance = total
     }
@@ -87,26 +91,8 @@ public struct NavigationRouteProgressGeometry {
             return route[route.count - 1]
         }
 
-        for index in 0..<(cumulativeDistances.count - 1) {
-            let startDistance = cumulativeDistances[index]
-            let endDistance = cumulativeDistances[index + 1]
-
-            if clamped > endDistance {
-                continue
-            }
-
-            let segmentLength = endDistance - startDistance
-            let t: Double
-            if segmentLength > 0 {
-                t = (clamped - startDistance) / segmentLength
-            } else {
-                t = 0
-            }
-
-            return route[index].interpolated(to: route[index + 1], t: t)
-        }
-
-        return route[route.count - 1]
+        let index = segmentStartIndex(forClampedProgress: clamped)
+        return interpolatedCoordinate(in: index, clampedProgress: clamped)
     }
 
     public func heading(at progress: CLLocationDistance, fallback: CLLocationDirection) -> CLLocationDirection {
@@ -139,36 +125,71 @@ public struct NavigationRouteProgressGeometry {
             return [route[route.count - 1]]
         }
 
-        for index in 0..<(cumulativeDistances.count - 1) {
-            let endDistance = cumulativeDistances[index + 1]
-            if clamped > endDistance {
-                continue
-            }
+        let index = segmentStartIndex(forClampedProgress: clamped)
+        let head = interpolatedCoordinate(in: index, clampedProgress: clamped)
+        let tail = route[(index + 1)...]
 
-            var output: [CLLocationCoordinate2D] = [coordinate(at: clamped)]
-            output.append(contentsOf: route[(index + 1)...])
-            return compactConsecutiveCoordinates(output)
+        // The stored route is already compacted, so the only possible duplicate is the
+        // interpolated head sitting on top of the next vertex.
+        if let next = tail.first, head.distance(to: next) <= 0.05 {
+            return Array(tail)
         }
 
-        return [route[route.count - 1]]
+        var output: [CLLocationCoordinate2D] = [head]
+        output.append(contentsOf: tail)
+        return output
     }
 
-    private func compactConsecutiveCoordinates(
+    // MARK: - Segment lookup
+
+    /// Binary-searches the sorted `cumulativeDistances` for the segment that contains
+    /// `clamped`, returning the index of the segment's start vertex.
+    ///
+    /// - Precondition: `0 < clamped < totalDistance` (callers handle the endpoints),
+    ///   which guarantees a valid segment exists.
+    private func segmentStartIndex(forClampedProgress clamped: CLLocationDistance) -> Int {
+        var low = 1
+        var high = cumulativeDistances.count - 1
+
+        while low < high {
+            let mid = (low + high) / 2
+            if cumulativeDistances[mid] >= clamped {
+                high = mid
+            } else {
+                low = mid + 1
+            }
+        }
+
+        return low - 1
+    }
+
+    private func interpolatedCoordinate(
+        in index: Int,
+        clampedProgress clamped: CLLocationDistance
+    ) -> CLLocationCoordinate2D {
+        let startDistance = cumulativeDistances[index]
+        let endDistance = cumulativeDistances[index + 1]
+        let segmentLength = endDistance - startDistance
+        let t = segmentLength > 0 ? (clamped - startDistance) / segmentLength : 0
+        return route[index].interpolated(to: route[index + 1], t: t)
+    }
+
+    private static func compactConsecutive(
         _ coordinates: [CLLocationCoordinate2D]
     ) -> [CLLocationCoordinate2D] {
         guard !coordinates.isEmpty else { return [] }
 
         var compacted: [CLLocationCoordinate2D] = []
+        compacted.reserveCapacity(coordinates.count)
+        var lastPoint: MKMapPoint?
 
         for coordinate in coordinates {
-            guard let last = compacted.last else {
-                compacted.append(coordinate)
+            let point = MKMapPoint(coordinate)
+            if let last = lastPoint, last.distance(to: point) <= 0.05 {
                 continue
             }
-
-            if last.distance(to: coordinate) > 0.05 {
-                compacted.append(coordinate)
-            }
+            compacted.append(coordinate)
+            lastPoint = point
         }
 
         return compacted
@@ -201,10 +222,10 @@ public struct NavigationRouteProgressGeometry {
 }
 
 private extension CLLocationCoordinate2D {
+    /// Planar distance via `MKMapPoint`, avoiding the two `CLLocation` allocations a
+    /// great-circle `CLLocation.distance(from:)` would incur on every call.
     func distance(to other: CLLocationCoordinate2D) -> CLLocationDistance {
-        CLLocation(latitude: latitude, longitude: longitude).distance(
-            from: CLLocation(latitude: other.latitude, longitude: other.longitude)
-        )
+        MKMapPoint(self).distance(to: MKMapPoint(other))
     }
 
     func interpolated(to other: CLLocationCoordinate2D, t: Double) -> CLLocationCoordinate2D {

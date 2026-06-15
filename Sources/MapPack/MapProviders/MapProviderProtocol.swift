@@ -179,15 +179,15 @@ public extension MapCameraControllable {
 }
 
 public extension MapProviderProtocol {
-    // These overloads were in the original extension but not the protocol definition.
-    // Keeping them here for backward compatibility.
-    
+    /// Convenience overloads that default to an animated focus and forward to the
+    /// provider's real implementation, rather than silently doing nothing.
+
     func focusOnPolyline(id: String, padding: UIEdgeInsets) {
-        // Default empty implementation - original behavior
+        focusOnPolyline(id: id, padding: padding, animated: true)
     }
-    
+
     func focusOnPolyline(id: String) {
-        // Default empty implementation - original behavior
+        focusOnPolyline(id: id, animated: true)
     }
 }
 

@@ -111,7 +111,6 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     private var polylinesById: [String: UniversalMapPolyline] = [:]
-    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Initialization
     
