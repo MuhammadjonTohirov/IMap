@@ -308,9 +308,15 @@ public class UniversalMapViewModel: ObservableObject {
         mapProviderInstance.focusOn(coordinates: coordinates, edges: edge, animated: animated)
     }
     
-    /// Get the current map view
+    /// Get the current map view as a SwiftUI view.
     public func makeMapView() -> AnyView {
         return mapProviderInstance.makeMapView()
+    }
+
+    /// Get the current map as a native UIKit view controller (UIKit integration).
+    @MainActor
+    public func makeMapViewController() -> UIViewController {
+        return mapProviderInstance.makeMapViewController()
     }
     
     public func setInteractionDelegate(_ delegate: any UniversalMapViewModelDelegate) {

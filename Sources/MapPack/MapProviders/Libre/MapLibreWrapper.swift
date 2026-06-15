@@ -10,6 +10,43 @@ import Foundation
 import MapLibre
 import SwiftUI
 
+/// Builds and configures the native `MLNMapView` used by both the SwiftUI wrapper
+/// (``MLNMapViewWrapper``) and the UIKit controller (`MapLibreMapViewController`),
+/// keeping the native-view setup in one place (DRY).
+enum MapLibreNativeMapFactory {
+    static let fallbackStyleURL = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+
+    @MainActor
+    static func make(
+        styleUrl: String?,
+        zoomLevel: Double,
+        inset: MapEdgeInsets?,
+        showsUserLocation: Bool,
+        delegate: MLNMapViewDelegate
+    ) -> MLNMapView {
+        let styleURL = URL(string: styleUrl ?? fallbackStyleURL)
+
+        let view = MLNMapView(frame: .zero, styleURL: styleURL)
+        view.showsUserLocation = showsUserLocation
+        view.zoomLevel = zoomLevel
+        view.showsUserHeadingIndicator = true
+        view.prefetchesTiles = false
+        view.isMultipleTouchEnabled = false
+        view.tileCacheEnabled = true
+        view.isPitchEnabled = false
+        view.isHapticFeedbackEnabled = true
+        view.delegate = delegate
+        view.accessibilityLabel = "mapView"
+        view.anchorRotateOrZoomGesturesToCenterCoordinate = true
+        view.attributionButton.isHidden = true
+        view.logoView.isHidden = true
+        if let inset = inset {
+            view.contentInset = inset.insets
+        }
+        return view
+    }
+}
+
 public struct MLNMapViewWrapper: UIViewRepresentable {
     @ObservedObject var viewModel: MapLibreWrapperModel
     var delegate: MLNMapViewDelegate
@@ -44,26 +81,13 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
     public typealias UIViewType = MLNMapView
     
     public func makeUIView(context: Context) -> MLNMapView {
-        let styleURL = URL(string: styleUrl ?? "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json")
-        
-        let view = MLNMapView(frame: .zero, styleURL: styleURL)
-        view.showsUserLocation = showsUserLocation
-        view.zoomLevel = viewModel.zoomLevel
-        view.showsUserHeadingIndicator = true
-        view.prefetchesTiles = false
-        view.isMultipleTouchEnabled = false
-        view.tileCacheEnabled = true
-        view.isPitchEnabled = false
-        view.isHapticFeedbackEnabled = true
-        view.delegate = delegate
-        view.accessibilityLabel = "mapView"
-        view.anchorRotateOrZoomGesturesToCenterCoordinate = true
-        view.attributionButton.isHidden = true
-        view.logoView.isHidden = true
-        if let inset = inset {
-            view.contentInset = inset.insets
-        }
-        return view
+        MapLibreNativeMapFactory.make(
+            styleUrl: styleUrl,
+            zoomLevel: viewModel.zoomLevel,
+            inset: inset,
+            showsUserLocation: showsUserLocation,
+            delegate: delegate
+        )
     }
     
     public func updateUIView(_ uiView: MLNMapView, context: Context) {

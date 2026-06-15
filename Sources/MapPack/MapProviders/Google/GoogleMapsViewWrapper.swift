@@ -21,6 +21,26 @@ public struct GMapCamera {
     }
 }
 
+/// Builds and configures the `GoogleMapViewController` used by both the SwiftUI
+/// wrapper (``GoogleMapsViewWrapper``) and the UIKit path (`GoogleMapProvider`),
+/// keeping the native-controller setup in one place (DRY).
+enum GoogleNativeMapFactory {
+    @MainActor
+    static func make(options: GMSMapViewOptions, viewModel: GoogleMapsViewWrapperModel) -> GoogleMapViewController {
+        let vc = GoogleMapViewController(option: options)
+        vc.delegate = viewModel
+        vc.map.isBuildingsEnabled = false
+        vc.map.isIndoorEnabled = false
+        vc.map.isTrafficEnabled = false
+        vc.map.settings.allowScrollGesturesDuringRotateOrZoom = false
+        vc.map.settings.rotateGestures = true
+        vc.map.settings.tiltGestures = false
+
+        viewModel.set(map: vc.map)
+        return vc
+    }
+}
+
 public struct GoogleMapsViewWrapper: UIViewControllerRepresentable, @unchecked Sendable {
     public typealias MarkerView = (_ mapView: GMSMapView, _ marker: GMSMarker) -> UIView?
     @ObservedObject var viewModel: GoogleMapsViewWrapperModel
@@ -32,17 +52,7 @@ public struct GoogleMapsViewWrapper: UIViewControllerRepresentable, @unchecked S
     }
 
     public func makeUIViewController(context: Context) -> GoogleMapViewController {
-        let vc = GoogleMapViewController(option: options)
-        vc.delegate = viewModel
-        vc.map.isBuildingsEnabled = false
-        vc.map.isIndoorEnabled = false
-        vc.map.isTrafficEnabled = false
-        vc.map.settings.allowScrollGesturesDuringRotateOrZoom = false
-        vc.map.settings.rotateGestures = true
-        vc.map.settings.tiltGestures = false
-        
-        viewModel.set(map: vc.map)
-        return vc
+        GoogleNativeMapFactory.make(options: options, viewModel: viewModel)
     }
     
     public func updateUIViewController(_ uiViewController: GoogleMapViewController, context: Context) {

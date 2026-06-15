@@ -124,6 +124,16 @@ public protocol MapViewable: AnyObject {
     func makeMapView() -> AnyView
 }
 
+/// Protocol for creating a native UIKit view controller for the map provider.
+///
+/// This is the UIKit counterpart of ``MapViewable``. SwiftUI hosts use
+/// ``MapViewable/makeMapView()``; UIKit hosts use ``makeMapViewController()``.
+public protocol MapUIKitViewable: AnyObject {
+    /// Returns a `UIViewController` hosting the provider's native map, for UIKit integration.
+    @MainActor
+    func makeMapViewController() -> UIViewController
+}
+
 // MARK: - Capabilities
 
 /// Defines the capabilities supported by a map provider
@@ -151,7 +161,7 @@ public struct MapCapabilities: OptionSet, Sendable {
 
 /// Protocol defining the common interface for map providers
 /// Adheres to Interface Segregation Principle by composing smaller protocols
-public protocol MapProviderProtocol: NSObject, MapCameraControllable, MapMarkerManageable, MapPolylineManageable, MapUserLocationDisplayable, MapStylable, MapInteractable, MapViewable {
+public protocol MapProviderProtocol: NSObject, MapCameraControllable, MapMarkerManageable, MapPolylineManageable, MapUserLocationDisplayable, MapStylable, MapInteractable, MapViewable, MapUIKitViewable {
     
     /// The capabilities supported by this provider
     var capabilities: MapCapabilities { get }
@@ -183,8 +193,21 @@ public extension MapProviderProtocol {
 
 public extension MapUserLocationDisplayable {
     func setUserLocationIcon(_ image: UIImage?, scale: CGFloat) {}
-    
+
     func updateUserLocation(_ location: CLLocation) {}
-    
+
     func showUserLocationAccuracy(_ show: Bool) {}
+}
+
+public extension MapUIKitViewable where Self: MapViewable {
+    /// Default UIKit bridge: hosts the provider's SwiftUI map in a `UIHostingController`.
+    ///
+    /// Providers should override this to vend their native view controller directly and
+    /// avoid the extra SwiftUI layer.
+    @MainActor
+    func makeMapViewController() -> UIViewController {
+        let host = UIHostingController(rootView: makeMapView())
+        host.view.backgroundColor = .clear
+        return host
+    }
 }

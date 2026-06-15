@@ -270,7 +270,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func makeMapView() -> AnyView {
-        
+
         return AnyView(
             MapLibreMapView(
                 viewModel: self.viewModel,
@@ -281,6 +281,19 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
                 trackingMode: userTrackingMode,
                 showsUserLocation: showsUserLocation
             )
+        )
+    }
+
+    @MainActor
+    public func makeMapViewController() -> UIViewController {
+        MapLibreMapViewController(
+            viewModel: self.viewModel,
+            delegate: viewModel,
+            camera: mapCamera,
+            styleUrl: viewModel.config?.lightStyle,
+            inset: mapInsets,
+            trackingMode: userTrackingMode,
+            showsUserLocation: showsUserLocation
         )
     }
 }

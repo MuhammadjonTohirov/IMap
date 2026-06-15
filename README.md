@@ -14,10 +14,10 @@
 
 ## Overview
 
-IMap abstracts the differences between Google Maps SDK and MapLibre, providing a clean, protocol-oriented API that works seamlessly with SwiftUI. The framework follows modern Swift best practices, including:
+IMap abstracts the differences between Google Maps SDK and MapLibre, providing a clean, protocol-oriented API that works seamlessly with both SwiftUI and UIKit. The framework follows modern Swift best practices, including:
 
 - **Protocol-oriented design** for flexibility and testability
-- **SwiftUI-first** approach with full support for declarative UI
+- **SwiftUI & UIKit** — first-class entry points for both, sharing one view model
 - **Swift Concurrency** support with async/await and actors
 - **Type safety** with strong typing throughout the API
 - **Memory efficient** marker rendering with visibility culling
@@ -132,6 +132,36 @@ struct MapView: View {
     }
 }
 ```
+
+#### UIKit
+
+The same map is available natively in UIKit — no `UIHostingController` required. Use either
+`UniversalMapViewController` (primary) or `UniversalMapContainerView` (a plain `UIView`). Both
+own a `UniversalMapViewModel`, so the full API (markers, polylines, tracking, camera) is
+identical to the SwiftUI path.
+
+```swift
+import UIKit
+import MapPack
+
+// As a view controller (recommended):
+let mapVC = UniversalMapViewController(provider: .mapLibre, config: config)
+    .showsUserLocation(true)
+    .userTrackingMode(true)
+navigationController?.pushViewController(mapVC, animated: true)
+
+// Drive the map through its view model:
+mapVC.viewModel.addMarker(marker)
+mapVC.viewModel.addPolyline(polyline, animated: true)
+
+// Or as a plain UIView (added inside a view controller):
+let mapView = UniversalMapContainerView(provider: .google, config: config)
+mapView.frame = view.bounds
+view.addSubview(mapView)
+```
+
+> The native pin / address-picker overlay is rendered in UIKit and is driven by the same
+> `viewModel.uiState` / `pinModel` that powers the SwiftUI overlay.
 
 ### 2. Adding Markers
 

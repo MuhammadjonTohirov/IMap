@@ -369,6 +369,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
             )
         )
     }
+
+    @MainActor
+    public func makeMapViewController() -> UIViewController {
+        GoogleNativeMapFactory.make(options: mapOptions, viewModel: viewModel)
+    }
     
     @MainActor
     public func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
