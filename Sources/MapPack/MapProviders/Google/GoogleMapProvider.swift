@@ -200,7 +200,14 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         )
 
         if camera.animate {
-            viewModel.mapView?.animate(to: position)
+            if let duration = camera.animationDuration {
+                CATransaction.begin()
+                CATransaction.setAnimationDuration(duration)
+                viewModel.mapView?.animate(to: position)
+                CATransaction.commit()
+            } else {
+                viewModel.mapView?.animate(to: position)
+            }
         } else {
             viewModel.mapView?.camera = position
         }

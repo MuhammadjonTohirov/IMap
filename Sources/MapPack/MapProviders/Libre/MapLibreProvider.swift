@@ -70,7 +70,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         if camera.animate {
             mapView.setCamera(
                 targetCamera,
-                withDuration: 1, // Smooth animation duration
+                withDuration: camera.animationDuration ?? 1, // Default smooth animation duration
                 animationTimingFunction: CAMediaTimingFunction(name: .linear)
             ) {
                 Logging.l(tag: "MapLibre", "Camera animation completed")
