@@ -15,6 +15,9 @@ public protocol UniversalMapMarkerProtocol: Identifiable, Hashable {
     var id: String { get }
     var coordinate: CLLocationCoordinate2D { get }
     var rotation: CLLocationDirection { get }
+    /// The real-world heading in degrees from north, independent of any
+    /// map-bearing compensation applied to the displayed `rotation`.
+    var worldHeading: CLLocationDirection { get }
 }
 
 extension CLLocationCoordinate2D {

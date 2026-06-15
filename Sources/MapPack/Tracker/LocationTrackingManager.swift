@@ -19,6 +19,11 @@ public class LocationTrackingManager: NSObject, ObservableObject {
     
     private(set) var defaultZoomLevel: Double = 17
     private(set) var trackingZoomLevel: Double?
+
+    // MARK: - Marker Follow Configuration
+    private(set) var markerFollowMode: MarkerFollowMode = .northUp
+    private(set) var markerFollowPitch: Double = 0
+    private(set) var markerFollowAnimationDuration: TimeInterval?
     
     // MARK: - Initialization
     public override init() {
@@ -110,14 +115,22 @@ public class LocationTrackingManager: NSObject, ObservableObject {
         guard case .marker(let id, let zoom) = trackingMode,
               id == markerId,
               let marker = mapProvider?.marker(byId: markerId) else { return }
-        
+
         let targetZoom = zoom ?? trackingZoomLevel ?? defaultZoomLevel
+        let isCourseUp = markerFollowMode == .courseUp
+
+        // Course-up follows the heading instantly so the map reacts immediately.
+        // North-up eases toward the target, which also animates the bearing back
+        // to north when leaving course-up.
         let camera = UniversalMapCamera(
             center: marker.coordinate,
             zoom: targetZoom,
-            animate: true
+            bearing: isCourseUp ? marker.worldHeading : 0,
+            pitch: markerFollowPitch,
+            animate: !isCourseUp,
+            animationDuration: isCourseUp ? nil : markerFollowAnimationDuration
         )
-        
+
         mapProvider?.updateCamera(to: camera)
     }
 }
@@ -143,23 +156,32 @@ extension LocationTrackingManager: LocationTrackingProtocol {
         delegate?.trackingDidStart(mode: trackingMode)
     }
     
-    public func trackMarker(_ markerId: String, zoom: Double? = nil) {
+    public func trackMarker(
+        _ markerId: String,
+        zoom: Double? = nil,
+        mode: MarkerFollowMode = .northUp,
+        pitch: Double = 0,
+        followAnimationDuration: TimeInterval? = nil
+    ) {
         let defaultZoomLevel = self.defaultZoomLevel
-        Logging.l(tag: "LocationTracking", "Starting marker tracking for ID: \(markerId) with zoom: \(zoom ?? defaultZoomLevel)")
-        
+        Logging.l(tag: "LocationTracking", "Starting marker tracking for ID: \(markerId) with zoom: \(zoom ?? defaultZoomLevel), mode: \(mode)")
+
         guard mapProvider?.marker(byId: markerId) != nil else {
             let error = NSError(domain: "LocationTracking", code: 3, userInfo: [NSLocalizedDescriptionKey: "Marker with ID \(markerId) not found"])
             delegate?.trackingDidFail(error: error)
             return
         }
-        
+
         trackingMode = .marker(id: markerId, zoom: zoom)
         trackingZoomLevel = zoom
+        markerFollowMode = mode
+        markerFollowPitch = pitch
+        markerFollowAnimationDuration = followAnimationDuration
         isTrackingActive = true
-        
-        // Initial camera update
+
+        // Initial camera update (snaps for course-up, eases for north-up)
         updateCameraForMarker(markerId)
-        
+
         // Notify delegate
         delegate?.trackingDidStart(mode: trackingMode)
     }
@@ -169,8 +191,11 @@ extension LocationTrackingManager: LocationTrackingProtocol {
         
         trackingMode = .none
         trackingZoomLevel = nil
+        markerFollowMode = .northUp
+        markerFollowPitch = 0
+        markerFollowAnimationDuration = nil
         isTrackingActive = false
-        
+
         // Stop location updates
         stopLocationUpdates()
         

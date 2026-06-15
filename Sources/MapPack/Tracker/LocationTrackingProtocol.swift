@@ -3,6 +3,14 @@
 import Foundation
 import CoreLocation
 
+/// Orientation of the camera while it follows a marker.
+public enum MarkerFollowMode: Equatable {
+    /// The camera keeps a fixed north-up bearing; only its center follows the marker.
+    case northUp
+    /// The camera rotates so the marker's `worldHeading` points up (course-up navigation).
+    case courseUp
+}
+
 /// Represents different tracking modes for the map camera
 public enum MapTrackingMode: Equatable {
     case none
@@ -36,7 +44,18 @@ public protocol LocationTrackingProtocol: AnyObject {
     /// - Parameters:
     ///   - markerId: ID of the marker to track
     ///   - zoom: Optional zoom level (uses default if nil)
-    func trackMarker(_ markerId: String, zoom: Double?)
+    ///   - mode: Camera orientation while following (north-up or course-up)
+    ///   - pitch: Camera pitch in degrees (0 = looking straight down)
+    ///   - followAnimationDuration: Duration used when the follow camera animates
+    ///     (north-up moves). When `nil`, the provider's default is used. Course-up
+    ///     follows the heading instantly regardless of this value.
+    func trackMarker(
+        _ markerId: String,
+        zoom: Double?,
+        mode: MarkerFollowMode,
+        pitch: Double,
+        followAnimationDuration: TimeInterval?
+    )
     
     /// Stop all tracking
     func stopTracking()

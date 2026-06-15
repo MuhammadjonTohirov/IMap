@@ -489,8 +489,24 @@ public extension UniversalMapViewModel {
     /// - Parameters:
     ///   - markerId: ID of the marker to track
     ///   - zoom: Optional zoom level (uses default if nil)
-    func trackMarker(_ markerId: String, zoom: Double? = nil) {
-        locationTrackingManager.trackMarker(markerId, zoom: zoom)
+    ///   - mode: Camera orientation while following (north-up or course-up)
+    ///   - pitch: Camera pitch in degrees (0 = looking straight down)
+    ///   - followAnimationDuration: Duration used when the follow camera animates
+    ///     (north-up moves). Course-up follows the heading instantly.
+    func trackMarker(
+        _ markerId: String,
+        zoom: Double? = nil,
+        mode: MarkerFollowMode = .northUp,
+        pitch: Double = 0,
+        followAnimationDuration: TimeInterval? = nil
+    ) {
+        locationTrackingManager.trackMarker(
+            markerId,
+            zoom: zoom,
+            mode: mode,
+            pitch: pitch,
+            followAnimationDuration: followAnimationDuration
+        )
     }
     
     /// Stop all location and marker tracking
