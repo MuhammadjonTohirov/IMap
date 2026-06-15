@@ -1,5 +1,5 @@
 import XCTest
-@testable import IMap
+@testable import MapPack
 
 final class IMapTests: XCTestCase {
     func testExample() throws {

@@ -45,8 +45,7 @@ public class UniversalMapViewModel: ObservableObject {
     // MARK: - Components
     @Published public var uiState = MapUIState()
     public let locationTrackingManager = LocationTrackingManager()
-    public let routeSessionManager = RouteSessionManager()
-    
+
     // MARK: - Published Properties (Backward Compatibility / Facade)
     @Published public var mapProvider: MapProvider
     @Published public var camera: UniversalMapCamera?
@@ -127,7 +126,6 @@ public class UniversalMapViewModel: ObservableObject {
         // Setup Managers
         self.locationTrackingManager.setMapProvider(instance)
         self.locationTrackingManager.setDefaultZoomLevel(defaultZoomLevel)
-        self.routeSessionManager.setMapProvider(instance)
 
         // Set up delegation
         self.mapProviderInstance.setInteractionDelegate(self)
@@ -170,8 +168,7 @@ public class UniversalMapViewModel: ObservableObject {
         
         // Update Managers
         locationTrackingManager.setMapProvider(mapProviderInstance)
-        routeSessionManager.setMapProvider(mapProviderInstance)
-        
+
         // Set delegation
         mapProviderInstance.setInteractionDelegate(self)
         
@@ -386,13 +383,6 @@ public class UniversalMapViewModel: ObservableObject {
     @MainActor
     public func zoomOut(minLevel: Float = 10, shift: Double = 0.5) {
         mapProviderInstance.zoomOut(minLevel: minLevel, shift: shift)
-    }
-    
-    // MARK: - Route Tracking
-    
-    /// Starts tracking a driver along the provided route.
-    public func startTracking(route: UniversalMapPolyline) {
-        routeSessionManager.startTracking(route: route)
     }
     
     // MARK: - Private Methods
