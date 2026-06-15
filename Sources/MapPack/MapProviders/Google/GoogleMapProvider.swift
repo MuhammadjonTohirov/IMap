@@ -192,10 +192,17 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     }
     
     public func updateCamera(to camera: UniversalMapCamera) {
+        let position = GMSCameraPosition(
+            target: camera.center,
+            zoom: Float(camera.zoom),
+            bearing: camera.bearing,
+            viewingAngle: camera.pitch
+        )
+
         if camera.animate {
-            viewModel.mapView?.animate(to: .camera(withTarget: camera.center, zoom: Float(camera.zoom)))
+            viewModel.mapView?.animate(to: position)
         } else {
-            viewModel.mapView?.camera = .camera(withTarget: camera.center, zoom: Float(camera.zoom))
+            viewModel.mapView?.camera = position
         }
     }
     
