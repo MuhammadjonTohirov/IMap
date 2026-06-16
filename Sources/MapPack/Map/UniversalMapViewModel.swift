@@ -231,7 +231,7 @@ public class UniversalMapViewModel: ObservableObject {
         }
 
         // Keep the cached camera's bearing coherent for internal observers.
-        camera?.bearing = bearing
+//        camera?.bearing = bearing
     }
     
     /// Set the map style
