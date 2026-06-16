@@ -231,7 +231,7 @@ public class UniversalMapViewModel: ObservableObject {
         }
 
         // Keep the cached camera's bearing coherent for internal observers.
-//        camera?.bearing = bearing
+        camera?.bearing = bearing
     }
     
     /// Set the map style
@@ -251,6 +251,7 @@ public class UniversalMapViewModel: ObservableObject {
     /// Enable or disable user tracking mode
     public func setUserTrackingMode(_ tracking: Bool) {
         self.userTrackingMode = tracking // Goes through setter
+        self.mapProviderInstance.setUserTrackingMode(tracking)
     }
     
     /// Set the map edge insets
