@@ -48,7 +48,7 @@ public class UniversalMapViewModel: ObservableObject {
 
     // MARK: - Published Properties (Backward Compatibility / Facade)
     @Published public var mapProvider: MapProvider
-    @Published public var camera: UniversalMapCamera?
+    @Published var camera: UniversalMapCamera?
     
     public var showUserLocation: Bool {
         get { uiState.showUserLocation }
@@ -177,6 +177,34 @@ public class UniversalMapViewModel: ObservableObject {
         if let config {
             set(config: config)
         }
+    }
+    
+    public func getCamera(animate: Bool = true) -> UniversalMapCamera? {
+        switch mapProvider {
+        case .google:
+            if let cam = (self.mapProviderInstance as? GoogleMapsProvider)?.viewModel.mapView?.camera {
+                return .init(
+                    center: cam.target,
+                    zoom: Double(cam.zoom),
+                    bearing: cam.bearing,
+                    pitch: cam.viewingAngle,
+                    animate: animate
+                )
+            }
+        case .mapLibre:
+            if let mapView = (self.mapProviderInstance as? MapLibreProvider)?.viewModel.mapView {
+                let cam = mapView.camera
+                return .init(
+                    center: cam.centerCoordinate,
+                    zoom: mapView.zoom(forAltitude: cam.altitude),
+                    bearing: cam.heading,
+                    pitch: cam.pitch,
+                    animate: animate
+                )
+            }
+        }
+        
+        return nil
     }
     
     /// Update the camera position

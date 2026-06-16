@@ -98,7 +98,7 @@ class UserLocationMarkerView: UIView {
 
 /// Implementation of the map provider protocol for Google Maps
 public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, CLLocationManagerDelegate {
-    private var viewModel: GoogleMapsViewWrapperModel = .init()
+    private(set) var viewModel: GoogleMapsViewWrapperModel = .init()
     
     public private(set) var polylines: [String : UniversalMapPolyline] = [:]
     
