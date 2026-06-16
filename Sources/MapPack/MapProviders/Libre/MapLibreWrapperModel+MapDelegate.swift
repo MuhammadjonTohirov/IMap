@@ -17,6 +17,7 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
     private var lastAccuracy: CLLocationAccuracy = 0
     private var lastLatitude: CLLocationDegrees = 0
     private var isCircleHidden: Bool = true
+    private var displayRotation: CLLocationDirection = 0
     
     override init(annotation: MLNAnnotation?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
@@ -48,16 +49,30 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
         }
         
         self.iconSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        // Reset any rotation before frame math, then restore it afterwards.
+        iconView?.transform = .identity
         iconView?.frame = CGRect(origin: .zero, size: iconSize)
-        
+
         // Initial layout
         self.frame = iconView?.frame ?? .zero
         iconView?.center = CGPoint(x: frame.width/2, y: frame.height/2)
+        applyRotation()
     }
     
     func setCircleHidden(_ hidden: Bool) {
         self.isCircleHidden = hidden
         self.circleView.isHidden = hidden
+    }
+
+    /// Rotates the icon to a display angle (degrees) already compensated for the current
+    /// map bearing. The accuracy circle is left unrotated.
+    func setDisplayRotation(_ degrees: CLLocationDirection) {
+        self.displayRotation = degrees
+        applyRotation()
+    }
+
+    private func applyRotation() {
+        iconView?.transform = CGAffineTransform(rotationAngle: CGFloat(displayRotation * .pi / 180))
     }
     
     func update(accuracy: CLLocationAccuracy, zoom: Double, latitude: CLLocationDegrees) {

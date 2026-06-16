@@ -342,9 +342,12 @@ public extension GoogleMapsViewWrapperModel {
         let id = marker.id
         // Update the data source entry if it exists
         if let existing = allMarkers[id] {
-            // Skip re-emitted identical fixes: avoids redundant marker writes and a
-            // full viewport rescan.
-            if existing.coordinate == marker.coordinate, existing.worldHeading == marker.worldHeading {
+            // Skip re-emitted identical fixes from a *different* instance. The user-location
+            // marker is mutated in place (existing === marker) and must always proceed so
+            // its rotation/visibility refresh runs.
+            if existing !== marker,
+               existing.coordinate == marker.coordinate,
+               existing.worldHeading == marker.worldHeading {
                 return
             }
             existing.set(coordinate: marker.coordinate)

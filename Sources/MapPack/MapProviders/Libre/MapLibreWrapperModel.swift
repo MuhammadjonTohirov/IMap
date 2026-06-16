@@ -60,6 +60,10 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     /// redundant per-frame work when the bearing has not changed.
     private var lastMarkerViewBearing: CLLocationDirection?
 
+    /// Latest reliable travel direction (degrees) of the custom user-location icon, so it
+    /// can point along travel and be re-compensated as the map rotates.
+    private var userLocationWorldHeading: CLLocationDirection?
+
     // MARK: - Readiness management
     
     private var pendingCameraActions: [() -> Void] = []
@@ -280,12 +284,20 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     func updateUserLocation(_ location: CLLocation) {
         self.userLocation = location
-        
+
+        // Keep the latest reliable travel direction so the icon can point along it.
+        if location.course >= 0 {
+            userLocationWorldHeading = location.course
+        }
+
         // Find the user location annotation view and update it
         if let mapView = mapView,
            let userLocationAnnotation = mapView.userLocation,
            let view = mapView.view(for: userLocationAnnotation) as? UniversalUserLocationAnnotationView {
             view.update(accuracy: location.horizontalAccuracy, zoom: mapView.zoomLevel, latitude: location.coordinate.latitude)
+            if let heading = userLocationWorldHeading {
+                view.setDisplayRotation(heading - mapView.camera.heading)
+            }
         }
     }
 }
@@ -350,6 +362,19 @@ extension MapLibreWrapperModel {
         for marker in markers.values where marker.compensatesForMapBearing {
             applyMarkerViewRotation(marker)
         }
+        refreshUserLocationViewRotation(mapBearing: bearing)
+    }
+
+    /// Re-compensates the custom user-location icon's rotation for the current map
+    /// bearing, so it keeps pointing along the travel direction as the map rotates.
+    private func refreshUserLocationViewRotation(mapBearing: CLLocationDirection) {
+        guard let heading = userLocationWorldHeading,
+              let mapView,
+              let userLocation = mapView.userLocation,
+              let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView else {
+            return
+        }
+        view.setDisplayRotation(heading - mapBearing)
     }
     
     func applyMarkerViewRotation(_ marker: UniversalMarker) {

@@ -172,15 +172,19 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
              m.groundAnchor = CGPoint(x: 0.5, y: 0.5)
              m.zIndex = 1000 // High zIndex
              m.tracksViewChanges = true // Essential for animation
+             // Rotate the icon to the travel direction, compensated for the map bearing.
+             m.set(compensatesForMapBearing: true)
+             if location.course >= 0 { m.set(heading: location.course) }
              viewModel.addMarker(id: userLocationMarkerId, marker: m)
              
              // Initial update
              container.update(accuracy: location.horizontalAccuracy, zoom: viewModel.mapView?.camera.zoom ?? 15, latitude: location.coordinate.latitude)
         } else {
-             // Update position
+             // Update position and travel-direction heading
              let m = viewModel.allMarkers[userLocationMarkerId]
              m?.set(coordinate: location.coordinate)
-             
+             if location.course >= 0 { m?.set(heading: location.course) }
+
              if let container = m?.iconView as? UserLocationMarkerView {
                  container.update(accuracy: location.horizontalAccuracy, zoom: viewModel.mapView?.camera.zoom ?? 15, latitude: location.coordinate.latitude)
              }

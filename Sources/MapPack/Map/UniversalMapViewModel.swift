@@ -480,8 +480,18 @@ public extension UniversalMapViewModel {
     /// Start tracking current location with camera following
     /// - Parameter zoom: Optional zoom level (uses default if nil)
     @MainActor
-    func trackCurrentLocationOnMap(zoom: Double? = nil) {
-        locationTrackingManager.trackCurrentLocationOnMap(zoom: zoom)
+    func trackCurrentLocationOnMap(
+        zoom: Double? = nil,
+        mode: CameraFollowMode = .northUp,
+        pitch: Double = 0,
+        followAnimationDuration: TimeInterval? = nil
+    ) {
+        locationTrackingManager.trackCurrentLocationOnMap(
+            zoom: zoom,
+            mode: mode,
+            pitch: pitch,
+            followAnimationDuration: followAnimationDuration
+        )
     }
     
     /// Start tracking a specific marker with camera following
@@ -495,7 +505,7 @@ public extension UniversalMapViewModel {
     func trackMarker(
         _ markerId: String,
         zoom: Double? = nil,
-        mode: MarkerFollowMode = .northUp,
+        mode: CameraFollowMode = .northUp,
         pitch: Double = 0,
         followAnimationDuration: TimeInterval? = nil
     ) {

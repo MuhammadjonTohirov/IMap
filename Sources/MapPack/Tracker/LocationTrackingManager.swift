@@ -19,10 +19,15 @@ public class LocationTrackingManager: NSObject, ObservableObject {
     private(set) var defaultZoomLevel: Double = 17
     private(set) var trackingZoomLevel: Double?
 
-    // MARK: - Marker Follow Configuration
-    private(set) var markerFollowMode: MarkerFollowMode = .northUp
-    private(set) var markerFollowPitch: Double = 0
-    private(set) var markerFollowAnimationDuration: TimeInterval?
+    // MARK: - Follow Configuration (current-location and marker)
+    private(set) var followOrientation: CameraFollowMode = .northUp
+    private(set) var followPitch: Double = 0
+    private(set) var followAnimationDuration: TimeInterval?
+    /// Last reliable course (degrees) used for course-up current-location following;
+    /// held when the device is too slow for `CLLocation.course` to be trustworthy.
+    private var lastCourseUpBearing: CLLocationDirection?
+    /// Speed (m/s) below which `CLLocation.course` is treated as unreliable.
+    private let minReliableCourseSpeed: CLLocationSpeed = 1.5
 
     // MARK: - Location Update Throttling
     /// Timestamp of the last applied location update; drives time-based throttling.
@@ -109,13 +114,11 @@ public class LocationTrackingManager: NSObject, ObservableObject {
         guard case .currentLocation(let zoom) = trackingMode else { return }
         
         let targetZoom = zoom ?? trackingZoomLevel ?? defaultZoomLevel
-        let camera = UniversalMapCamera(
-            center: location.coordinate,
-            zoom: targetZoom,
-            animate: true
+        updateFollowCamera(
+            coordinate: location.coordinate,
+            heading: courseUpBearing(for: location),
+            zoom: targetZoom
         )
-        
-        mapProvider?.updateCamera(to: camera)
     }
     
     private func updateCameraForMarker(_ markerId: String) {
@@ -124,33 +127,65 @@ public class LocationTrackingManager: NSObject, ObservableObject {
               let marker = mapProvider?.marker(byId: markerId) else { return }
 
         let targetZoom = zoom ?? trackingZoomLevel ?? defaultZoomLevel
-        let isCourseUp = markerFollowMode == .courseUp
-
-        // Course-up follows the heading instantly so the map reacts immediately.
-        // North-up eases toward the target, which also animates the bearing back
-        // to north when leaving course-up.
-        let camera = UniversalMapCamera(
-            center: marker.coordinate,
-            zoom: targetZoom,
-            bearing: isCourseUp ? marker.worldHeading : 0,
-            pitch: markerFollowPitch,
-            animate: !isCourseUp,
-            animationDuration: isCourseUp ? nil : markerFollowAnimationDuration
+        updateFollowCamera(
+            coordinate: marker.coordinate,
+            heading: marker.worldHeading,
+            zoom: targetZoom
         )
+    }
 
+    /// Builds and applies the follow camera shared by current-location and marker
+    /// following. Course-up snaps to the heading so the map reacts instantly; north-up
+    /// eases toward the target, which also animates the bearing back to north when
+    /// leaving course-up.
+    private func updateFollowCamera(
+        coordinate: CLLocationCoordinate2D,
+        heading: CLLocationDirection,
+        zoom: Double
+    ) {
+        let isCourseUp = followOrientation == .courseUp
+        let camera = UniversalMapCamera(
+            center: coordinate,
+            zoom: zoom,
+            bearing: isCourseUp ? heading : 0,
+            pitch: followPitch,
+            animate: !isCourseUp,
+            animationDuration: isCourseUp ? nil : followAnimationDuration
+        )
         mapProvider?.updateCamera(to: camera)
+    }
+
+    /// Heading for course-up current-location following, taken from GPS course when the
+    /// device is moving fast enough to trust it, otherwise the last reliable course.
+    private func courseUpBearing(for location: CLLocation) -> CLLocationDirection {
+        if location.course >= 0, location.speed >= minReliableCourseSpeed {
+            lastCourseUpBearing = location.course
+        }
+        return lastCourseUpBearing ?? 0
     }
 }
 
 // MARK: - LocationTrackingProtocol Implementation
 extension LocationTrackingManager: LocationTrackingProtocol {
     
-    public func trackCurrentLocationOnMap(zoom: Double? = nil) {
+    public func trackCurrentLocationOnMap(
+        zoom: Double? = nil,
+        mode: CameraFollowMode = .northUp,
+        pitch: Double = 0,
+        followAnimationDuration: TimeInterval? = nil
+    ) {
         let defaultZoomLevel = self.defaultZoomLevel
-        Logging.l(tag: "LocationTracking", "Starting current location tracking with zoom: \(zoom ?? defaultZoomLevel)")
-        
+        Logging.l(tag: "LocationTracking", "Starting current location tracking with zoom: \(zoom ?? defaultZoomLevel), mode: \(mode)")
+
+        // One camera owner: drop any native follow before taking over.
+        mapProvider?.setUserTrackingMode(false)
+
         trackingMode = .currentLocation(zoom: zoom)
         trackingZoomLevel = zoom
+        followOrientation = mode
+        followPitch = pitch
+        self.followAnimationDuration = followAnimationDuration
+        lastCourseUpBearing = nil
         isTrackingActive = true
         
         // Enable user location on the map
@@ -166,7 +201,7 @@ extension LocationTrackingManager: LocationTrackingProtocol {
     public func trackMarker(
         _ markerId: String,
         zoom: Double? = nil,
-        mode: MarkerFollowMode = .northUp,
+        mode: CameraFollowMode = .northUp,
         pitch: Double = 0,
         followAnimationDuration: TimeInterval? = nil
     ) {
@@ -179,11 +214,14 @@ extension LocationTrackingManager: LocationTrackingProtocol {
             return
         }
 
+        // One camera owner: drop any native follow before taking over.
+        mapProvider?.setUserTrackingMode(false)
+
         trackingMode = .marker(id: markerId, zoom: zoom)
         trackingZoomLevel = zoom
-        markerFollowMode = mode
-        markerFollowPitch = pitch
-        markerFollowAnimationDuration = followAnimationDuration
+        followOrientation = mode
+        followPitch = pitch
+        self.followAnimationDuration = followAnimationDuration
         isTrackingActive = true
 
         // Initial camera update (snaps for course-up, eases for north-up)
@@ -198,9 +236,10 @@ extension LocationTrackingManager: LocationTrackingProtocol {
         
         trackingMode = .none
         trackingZoomLevel = nil
-        markerFollowMode = .northUp
-        markerFollowPitch = 0
-        markerFollowAnimationDuration = nil
+        followOrientation = .northUp
+        followPitch = 0
+        followAnimationDuration = nil
+        lastCourseUpBearing = nil
         isTrackingActive = false
 
         // Stop location updates

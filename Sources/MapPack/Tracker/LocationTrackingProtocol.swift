@@ -3,13 +3,16 @@
 import Foundation
 import CoreLocation
 
-/// Orientation of the camera while it follows a marker.
-public enum MarkerFollowMode: Equatable {
-    /// The camera keeps a fixed north-up bearing; only its center follows the marker.
+/// Orientation of the follow camera, used for both current-location and marker follow.
+public enum CameraFollowMode: Equatable {
+    /// The camera keeps a fixed north-up bearing; only its center follows the target.
     case northUp
-    /// The camera rotates so the marker's `worldHeading` points up (course-up navigation).
+    /// The camera rotates so the target's heading points up (course-up navigation).
     case courseUp
 }
+
+/// Legacy name retained for source compatibility.
+public typealias MarkerFollowMode = CameraFollowMode
 
 /// Represents different tracking modes for the map camera
 public enum MapTrackingMode: Equatable {
@@ -36,9 +39,20 @@ public protocol LocationTrackingProtocol: AnyObject {
     /// Current tracking mode
     var trackingMode: MapTrackingMode { get }
     
-    /// Start tracking current location
-    /// - Parameter zoom: Optional zoom level (uses default if nil)
-    func trackCurrentLocationOnMap(zoom: Double?)
+    /// Start tracking current location with camera following.
+    /// - Parameters:
+    ///   - zoom: Optional zoom level (uses default if nil)
+    ///   - mode: Camera orientation while following. Course-up rotates the map to the
+    ///     device's travel direction (`CLLocation.course`).
+    ///   - pitch: Camera pitch in degrees (0 = looking straight down)
+    ///   - followAnimationDuration: Duration used when the follow camera animates
+    ///     (north-up moves). Course-up follows the heading instantly.
+    func trackCurrentLocationOnMap(
+        zoom: Double?,
+        mode: CameraFollowMode,
+        pitch: Double,
+        followAnimationDuration: TimeInterval?
+    )
     
     /// Start tracking a specific marker
     /// - Parameters:
@@ -52,7 +66,7 @@ public protocol LocationTrackingProtocol: AnyObject {
     func trackMarker(
         _ markerId: String,
         zoom: Double?,
-        mode: MarkerFollowMode,
+        mode: CameraFollowMode,
         pitch: Double,
         followAnimationDuration: TimeInterval?
     )
