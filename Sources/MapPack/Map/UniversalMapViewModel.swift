@@ -212,6 +212,27 @@ public class UniversalMapViewModel: ObservableObject {
         self.camera = camera
         mapProviderInstance.updateCamera(to: camera)
     }
+
+    /// Rotate the map to `bearing`, leaving the center, zoom, and pitch unchanged.
+    ///
+    /// Sets the provider's native heading directly (no camera round-trip), so the
+    /// visible zoom can't drift as a side effect of changing direction.
+    ///
+    /// - Parameters:
+    ///   - bearing: Target heading in degrees clockwise from true north
+    ///     (0 = north, 90 = east).
+    ///   - animate: Animate the rotation. Defaults to `true`.
+    public func setBearing(_ bearing: CLLocationDirection, animate: Bool = true) {
+        switch mapProvider {
+        case .google:
+            (mapProviderInstance as? GoogleMapsProvider)?.setBearing(bearing, animate: animate)
+        case .mapLibre:
+            (mapProviderInstance as? MapLibreProvider)?.setBearing(bearing, animate: animate)
+        }
+
+        // Keep the cached camera's bearing coherent for internal observers.
+        camera?.bearing = bearing
+    }
     
     /// Set the map style
     public func setMapStyle(_ style: any UniversalMapStyleProtocol, scheme: ColorScheme) {

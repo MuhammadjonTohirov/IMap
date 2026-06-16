@@ -79,7 +79,13 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
             mapView.camera = targetCamera
         }
     }
-    
+
+    /// Rotate the map to `bearing` (degrees clockwise from true north), leaving
+    /// the center, zoom, and pitch unchanged.
+    func setBearing(_ bearing: CLLocationDirection, animate: Bool) {
+        viewModel.mapView?.setDirection(bearing, animated: animate)
+    }
+
     @MainActor
     public func set(preferredRefreshRate: MapRefreshRate) {
         self.viewModel.set(preferredRefreshRate: preferredRefreshRate)

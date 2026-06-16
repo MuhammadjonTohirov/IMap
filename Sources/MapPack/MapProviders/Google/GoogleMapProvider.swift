@@ -216,7 +216,25 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
             viewModel.mapView?.camera = position
         }
     }
-    
+
+    /// Rotate the map to `bearing` (degrees clockwise from true north), leaving
+    /// the center, zoom, and pitch unchanged.
+    func setBearing(_ bearing: CLLocationDirection, animate: Bool) {
+        guard let mapView = viewModel.mapView else { return }
+        let current = mapView.camera
+        let rotated = GMSCameraPosition(
+            target: current.target,
+            zoom: current.zoom,
+            bearing: bearing,
+            viewingAngle: current.viewingAngle
+        )
+        if animate {
+            mapView.animate(to: rotated)
+        } else {
+            mapView.camera = rotated
+        }
+    }
+
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
         viewModel.mapView?.padding.top = insets.insets.top
         viewModel.mapView?.padding.left = insets.insets.left
