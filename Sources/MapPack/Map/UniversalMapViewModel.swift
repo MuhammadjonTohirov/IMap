@@ -509,6 +509,11 @@ public extension UniversalMapViewModel {
     }
     
     /// Stop all location and marker tracking
+    func stopTrackCurrentLocationOnMap() {
+        locationTrackingManager.stopTracking()
+    }
+   
+    @available(*, deprecated, renamed: "stopTrackCurrentLocationOnMap")
     func stopTracking() {
         locationTrackingManager.stopTracking()
     }
