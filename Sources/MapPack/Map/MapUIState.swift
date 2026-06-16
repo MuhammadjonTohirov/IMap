@@ -16,7 +16,7 @@ public struct MapUIState {
     public var addressInfo: AddressInfo?
     public var pinModel: PinViewModel = .init()
     public var showUserLocation: Bool = true
-    public var userTrackingMode: Bool = false
+    public var userTrackingMode: UserLocationtrackingMode = .none
     public var edgeInsets = UniversalMapEdgeInsets()
     
     public init() {}

@@ -354,7 +354,7 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         viewModel.mapView?.setMinZoom(Float(min), maxZoom: Float(max))
     }
     
-    public func setUserTrackingMode(_ tracking: Bool) {
+    public func setUserTrackingMode(mode: UserLocationtrackingMode) {
         if capabilities.contains(.userTrackingMode) {
              // Implementation would go here
         } else {

@@ -11,6 +11,23 @@ import SwiftUI
 import MapLibre
 import CoreLocation
 
+public enum UserLocationtrackingMode {
+    case heading
+    case course
+    case none
+    
+    var maplibre: MLNUserTrackingMode {
+        switch self {
+        case .heading:
+            return .followWithHeading
+        case .course:
+            return .followWithCourse
+        case .none:
+            return .none
+        }
+    }
+}
+
 public struct MapLibreLightStyle: UniversalMapStyleProtocol {
     public var source: String {
         "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
@@ -27,7 +44,9 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?
     private var showsUserLocation: Bool = true
-    private var userTrackingMode: MLNUserTrackingMode?
+    public var userTrackingMode: MLNUserTrackingMode? {
+        self.viewModel.mapView?.userTrackingMode
+    }
     
     public var currentLocation: CLLocation? {
         self.viewModel.mapView?.userLocation?.location
@@ -220,9 +239,8 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.viewModel.mapView?.maximumZoomLevel = max
     }
     
-    public func setUserTrackingMode(_ tracking: Bool) {
-        self.userTrackingMode = tracking ? .followWithHeading : nil
-        self.viewModel.mapView?.userTrackingMode = tracking ? .followWithHeading : .none
+    public func setUserTrackingMode(mode: UserLocationtrackingMode) {
+        self.viewModel.mapView?.userTrackingMode = mode.maplibre
     }
     
     public func showUserLocationAccuracy(_ show: Bool) {

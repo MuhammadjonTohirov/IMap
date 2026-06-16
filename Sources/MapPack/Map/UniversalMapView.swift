@@ -88,8 +88,8 @@ public struct UniversalMapView: View {
     }
     
     /// Enable or disable user tracking mode
-    public func userTrackingMode(_ tracking: Bool) -> Self {
-        viewModel.setUserTrackingMode(tracking)
+    public func userTrackingMode(_ mode: UserLocationtrackingMode) -> Self {
+        viewModel.setUserTrackingMode(mode)
         return self
     }
     

@@ -209,7 +209,7 @@ extension LocationTrackingManager: LocationTrackingProtocol {
         Logging.l(tag: "LocationTracking", "Starting current location tracking with zoom: \(zoom ?? defaultZoomLevel), mode: \(mode)")
 
         // One camera owner: drop any native follow before taking over.
-        mapProvider?.setUserTrackingMode(false)
+        mapProvider?.setUserTrackingMode(mode: .none)
 
         trackingMode = .currentLocation(zoom: zoom)
         trackingZoomLevel = zoom
@@ -247,7 +247,7 @@ extension LocationTrackingManager: LocationTrackingProtocol {
         }
 
         // One camera owner: drop any native follow before taking over.
-        mapProvider?.setUserTrackingMode(false)
+        mapProvider?.setUserTrackingMode(mode: .none)
 
         trackingMode = .marker(id: markerId, zoom: zoom)
         trackingZoomLevel = zoom

@@ -41,8 +41,8 @@ public extension UniversalMapConfiguring {
 
     /// Enable or disable user tracking mode.
     @discardableResult
-    func userTrackingMode(_ tracking: Bool) -> Self {
-        viewModel.setUserTrackingMode(tracking)
+    func userTrackingMode(_ mode: UserLocationtrackingMode) -> Self {
+        viewModel.setUserTrackingMode(mode)
         return self
     }
 

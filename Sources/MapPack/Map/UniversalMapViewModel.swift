@@ -58,11 +58,11 @@ public class UniversalMapViewModel: ObservableObject {
         }
     }
     
-    public var userTrackingMode: Bool {
+    public var userTrackingMode: UserLocationtrackingMode {
         get { uiState.userTrackingMode }
         set {
             uiState.userTrackingMode = newValue
-            mapProviderInstance.setUserTrackingMode(newValue)
+            mapProviderInstance.setUserTrackingMode(mode: newValue)
         }
     }
     
@@ -249,9 +249,8 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     /// Enable or disable user tracking mode
-    public func setUserTrackingMode(_ tracking: Bool) {
-        self.userTrackingMode = tracking // Goes through setter
-        self.mapProviderInstance.setUserTrackingMode(tracking)
+    public func setUserTrackingMode(_ mode: UserLocationtrackingMode) {
+        self.userTrackingMode = mode // Goes through setter
     }
     
     /// Set the map edge insets
@@ -444,7 +443,7 @@ public class UniversalMapViewModel: ObservableObject {
         }
         
         mapProviderInstance.showUserLocation(uiState.showUserLocation)
-        mapProviderInstance.setUserTrackingMode(uiState.userTrackingMode)
+        mapProviderInstance.setUserTrackingMode(mode: uiState.userTrackingMode)
         mapProviderInstance.setEdgeInsets(uiState.edgeInsets)
         
         // Re-add all markers
