@@ -3,6 +3,7 @@
 import Foundation
 import CoreLocation
 import Combine
+import NavigationTrackingCore
 
 /// Centralized location tracking manager
 public class LocationTrackingManager: NSObject, ObservableObject {
@@ -28,6 +29,13 @@ public class LocationTrackingManager: NSObject, ObservableObject {
     private var lastCourseUpBearing: CLLocationDirection?
     /// Speed (m/s) below which `CLLocation.course` is treated as unreliable.
     private let minReliableCourseSpeed: CLLocationSpeed = 1.5
+    /// Recent positions used to derive a stable movement bearing when GPS course is
+    /// unavailable (e.g. on the simulator or at low speed).
+    private var followCoordinateTrail: [CLLocationCoordinate2D] = []
+    /// Number of recent positions retained for the movement-bearing trail.
+    private let followTrailLimit = 4
+    /// Minimum trail span (meters) before a movement bearing is considered meaningful.
+    private let minTrailBearingDistance: CLLocationDistance = 1.0
 
     // MARK: - Location Update Throttling
     /// Timestamp of the last applied location update; drives time-based throttling.
@@ -155,12 +163,35 @@ public class LocationTrackingManager: NSObject, ObservableObject {
         mapProvider?.updateCamera(to: camera)
     }
 
-    /// Heading for course-up current-location following, taken from GPS course when the
-    /// device is moving fast enough to trust it, otherwise the last reliable course.
+    /// Heading for course-up current-location following.
+    ///
+    /// Prefers GPS `course` when the device is clearly moving (Core Location already
+    /// smooths it); otherwise derives the bearing from a short trail of recent positions
+    /// (oldest → newest). The trail both works when `course` is unavailable (simulator,
+    /// low speed) and averages out per-fix jitter. The last bearing is held when neither
+    /// source is usable, so the map never spins while stationary.
     private func courseUpBearing(for location: CLLocation) -> CLLocationDirection {
+        let coordinate = location.coordinate
+
+        // Append to the trail, ignoring near-duplicate fixes.
+        let movedEnough = followCoordinateTrail.last.map {
+            $0.greatCircleDistance(to: coordinate) > 0.5
+        } ?? true
+        if movedEnough {
+            followCoordinateTrail.append(coordinate)
+            if followCoordinateTrail.count > followTrailLimit {
+                followCoordinateTrail.removeFirst()
+            }
+        }
+
         if location.course >= 0, location.speed >= minReliableCourseSpeed {
             lastCourseUpBearing = location.course
+        } else if let oldest = followCoordinateTrail.first,
+                  oldest.greatCircleDistance(to: coordinate) > minTrailBearingDistance,
+                  let bearing = oldest.bearing(to: coordinate) {
+            lastCourseUpBearing = bearing
         }
+
         return lastCourseUpBearing ?? 0
     }
 }
@@ -186,6 +217,7 @@ extension LocationTrackingManager: LocationTrackingProtocol {
         followPitch = pitch
         self.followAnimationDuration = followAnimationDuration
         lastCourseUpBearing = nil
+        followCoordinateTrail.removeAll()
         isTrackingActive = true
         
         // Enable user location on the map
@@ -240,6 +272,7 @@ extension LocationTrackingManager: LocationTrackingProtocol {
         followPitch = 0
         followAnimationDuration = nil
         lastCourseUpBearing = nil
+        followCoordinateTrail.removeAll()
         isTrackingActive = false
 
         // Stop location updates
