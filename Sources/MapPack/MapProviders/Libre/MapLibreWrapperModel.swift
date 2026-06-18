@@ -63,6 +63,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     /// Latest reliable travel direction (degrees) of the custom user-location icon, so it
     /// can point along travel and be re-compensated as the map rotates.
     private var userLocationWorldHeading: CLLocationDirection?
+    private(set) var requestedUserTrackingMode: UserLocationtrackingMode = .none
 
     // MARK: - Readiness management
     
@@ -128,8 +129,17 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     func set(mapView: MLNMapView?) {
         self.mapView = mapView
+        mapView?.showsUserHeadingIndicator = true
+        mapView?.userTrackingMode = requestedUserTrackingMode.maplibre
         // Attempt to drain if the view is already sized and style may be loaded
         scheduleReadinessChecks()
+    }
+
+    func setUserTrackingMode(_ mode: UserLocationtrackingMode) {
+        requestedUserTrackingMode = mode
+        mapView?.showsUserHeadingIndicator = true
+        mapView?.userTrackingMode = mode.maplibre
+        refreshUserLocationViewRotation(mapBearing: mapView?.camera.heading ?? 0)
     }
     
     @MainActor
@@ -285,20 +295,58 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     func updateUserLocation(_ location: CLLocation) {
         self.userLocation = location
 
-        // Keep the latest reliable travel direction so the icon can point along it.
-        if location.course >= 0 {
-            userLocationWorldHeading = location.course
-        }
-
         // Find the user location annotation view and update it
         if let mapView = mapView,
            let userLocationAnnotation = mapView.userLocation,
            let view = mapView.view(for: userLocationAnnotation) as? UniversalUserLocationAnnotationView {
-            view.update(accuracy: location.horizontalAccuracy, zoom: mapView.zoomLevel, latitude: location.coordinate.latitude)
-            if let heading = userLocationWorldHeading {
-                view.setDisplayRotation(heading - mapView.camera.heading)
-            }
+            updateUserLocationView(
+                view,
+                location: location,
+                deviceHeading: userLocationAnnotation.heading,
+                mapView: mapView
+            )
         }
+    }
+
+    func updateUserLocation(_ userLocation: MLNUserLocation, in mapView: MLNMapView) {
+        guard let location = userLocation.location else { return }
+
+        self.userLocation = location
+
+        guard let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView else {
+            return
+        }
+
+        updateUserLocationView(
+            view,
+            location: location,
+            deviceHeading: userLocation.heading,
+            mapView: mapView
+        )
+    }
+
+    func updateUserLocationView(
+        _ view: UniversalUserLocationAnnotationView,
+        location: CLLocation,
+        deviceHeading: CLHeading?,
+        mapView: MLNMapView
+    ) {
+        view.update(
+            accuracy: location.horizontalAccuracy,
+            zoom: mapView.zoomLevel,
+            latitude: location.coordinate.latitude
+        )
+
+        guard let heading = userLocationHeading(
+            location: location,
+            deviceHeading: deviceHeading,
+            trackingMode: mapView.userTrackingMode
+        ) else {
+            return
+        }
+
+        userLocationWorldHeading = heading
+        view.setDisplayRotation(displayRotation(for: heading, mapView: mapView, mapBearing: mapBearing))
     }
 }
 
@@ -374,14 +422,57 @@ extension MapLibreWrapperModel {
               let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView else {
             return
         }
-        view.setDisplayRotation(heading - mapBearing)
+        view.setDisplayRotation(displayRotation(for: heading, mapView: mapView))
+    }
+
+    private func userLocationHeading(
+        location: CLLocation,
+        deviceHeading: CLHeading?,
+        trackingMode: MLNUserTrackingMode
+    ) -> CLLocationDirection? {
+        if trackingMode == .followWithHeading {
+            return validDeviceHeading(deviceHeading) ?? userLocationWorldHeading
+        }
+
+        if location.course >= 0 {
+            return location.course
+        }
+
+        return userLocationWorldHeading
+    }
+
+    private func validDeviceHeading(_ heading: CLHeading?) -> CLLocationDirection? {
+        if let trueHeading = heading?.trueHeading, trueHeading >= 0 {
+            return trueHeading
+        }
+
+        if let magneticHeading = heading?.magneticHeading, magneticHeading >= 0 {
+            return magneticHeading
+        }
+
+        return nil
+    }
+
+    private func displayRotation(
+        for heading: CLLocationDirection,
+        mapView: MLNMapView,
+        mapBearing: CLLocationDirection? = nil
+    ) -> CLLocationDirection {
+        let usesNativeRotatingTrackingMode = mapView.userTrackingMode == .followWithCourse
+            || mapView.userTrackingMode == .followWithHeading
+
+        return MapLibreUserLocationIconRotation.displayRotation(
+            for: heading,
+            mapBearing: mapBearing ?? mapView.camera.heading,
+            usesNativeRotatingTrackingMode: usesNativeRotatingTrackingMode
+        )
     }
     
     func applyMarkerViewRotation(_ marker: UniversalMarker) {
         let angle = markerViewRotationAngle(for: marker)
-        if let last = marker.lastAppliedViewRotation, abs(angle - last) <= 0.0001 {
-            return
-        }
+//        if let last = marker.lastAppliedViewRotation, abs(angle - last) <= 0.0001 {
+//            return
+//        }
         marker.view?.transform = CGAffineTransform(rotationAngle: angle)
         marker.lastAppliedViewRotation = angle
     }

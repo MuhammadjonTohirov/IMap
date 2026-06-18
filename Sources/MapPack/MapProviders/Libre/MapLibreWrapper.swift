@@ -99,9 +99,10 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
         // Provide mapView to model and gesture setup
         viewModel.set(mapView: uiView)
 
-        // Apply tracking mode before camera to avoid overrides
-        if let trackingMode = trackingMode, uiView.userTrackingMode != trackingMode {
-            uiView.userTrackingMode = trackingMode
+        // Apply tracking mode before camera to avoid overrides.
+        let requestedTrackingMode = viewModel.requestedUserTrackingMode.maplibre
+        if uiView.userTrackingMode != requestedTrackingMode {
+            uiView.userTrackingMode = requestedTrackingMode
         }
         
         // User location visibility

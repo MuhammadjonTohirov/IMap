@@ -169,13 +169,11 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
     }
     
     public func mapView(_ mapView: MLNMapView, didUpdate userLocation: MLNUserLocation?) {
-        guard let location = userLocation?.location,
-              let annotation = userLocation,
-              let view = mapView.view(for: annotation) as? UniversalUserLocationAnnotationView else {
+        guard let userLocation else {
             return
         }
         
-        view.update(accuracy: location.horizontalAccuracy, zoom: mapView.zoomLevel, latitude: location.coordinate.latitude)
+        updateUserLocation(userLocation, in: mapView)
         
         // Propagate to interaction delegate if needed, though usually this is internal
         // self.interactionDelegate?.userLocationDidUpdate(location) 
@@ -200,7 +198,14 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
 
             // Initial update if location is known
             if let userLoc = annotation as? MLNUserLocation, let location = userLoc.location {
-                view?.update(accuracy: location.horizontalAccuracy, zoom: mapView.zoomLevel, latitude: location.coordinate.latitude)
+                if let view {
+                    updateUserLocationView(
+                        view,
+                        location: location,
+                        deviceHeading: userLoc.heading,
+                        mapView: mapView
+                    )
+                }
             }
 
             return view
