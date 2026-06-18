@@ -28,6 +28,8 @@ public protocol MapInteractionDelegate: AnyObject {
     func mapDidTap(at coordinate: CLLocationCoordinate2D)
     
     func mapDidLoaded()
+    
+    func mapDidRotate(to coordinate: CLLocationCoordinate2D)
 }
 
 // Default implementation
@@ -38,4 +40,5 @@ public extension MapInteractionDelegate {
     func mapDidTapMarker(id: String) -> Bool { false }
     func mapDidTap(at coordinate: CLLocationCoordinate2D) {}
     func mapDidLoaded() {}
+    func mapDidRotate(to coordinate: CLLocationCoordinate2D) {}
 }
