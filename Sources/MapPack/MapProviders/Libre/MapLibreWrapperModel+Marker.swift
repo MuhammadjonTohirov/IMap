@@ -12,21 +12,13 @@ import MapLibre
 
 extension MapLibreWrapperModel {
     func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
-        let annotation = self.markers[marker.id]
-        var hasChange: Bool = true
-        
-        if let annotation {
-            hasChange = annotation.coordinate != marker.coordinate || annotation.rotation != marker.rotation
-        }
-        
-        guard hasChange else {
+        guard let annotation = self.markers[marker.id] else {
+            addMarker(marker)
             return
         }
-        
-        annotation?.updatePosition(coordinate: marker.coordinate, heading: marker.rotation)
-        if let annotation {
-            self.applyMarkerViewRotation(annotation)
-        }
+
+        annotation.updatePosition(coordinate: marker.coordinate, heading: marker.worldHeading)
+        self.applyMarkerViewRotation(annotation)
     }
 }
 

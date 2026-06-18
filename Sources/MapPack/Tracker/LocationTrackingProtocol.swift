@@ -35,6 +35,7 @@ public enum MapTrackingMode: Equatable {
 }
 
 /// Protocol for location tracking capabilities
+@MainActor
 public protocol LocationTrackingProtocol: AnyObject {
     /// Current tracking mode
     var trackingMode: MapTrackingMode { get }
@@ -82,6 +83,7 @@ public protocol LocationTrackingProtocol: AnyObject {
 }
 
 /// Delegate for location tracking events
+@MainActor
 public protocol LocationTrackingDelegate: AnyObject {
     func trackingDidStart(mode: MapTrackingMode)
     func trackingDidStop()

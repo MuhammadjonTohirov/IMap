@@ -1,6 +1,7 @@
 import CoreLocation
 import UIKit
 
+@MainActor
 public final class NavigationRouteProgressAnimationService: NSObject, NavigationRouteProgressAnimating {
     private var displayLink: CADisplayLink?
     private var startedAt: CFTimeInterval = 0

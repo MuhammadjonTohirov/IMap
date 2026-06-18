@@ -10,6 +10,7 @@ import Foundation
 import CoreLocation
 
 /// Protocol for handling map interaction events
+@MainActor
 public protocol MapInteractionDelegate: AnyObject {
     /// Called when the map starts being dragged by the user
     func mapDidStartDragging()

@@ -216,6 +216,7 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
             
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifer) ?? MLNAnnotationView(annotation: annotation, reuseIdentifier: identifer)
             if let _view = marker.view {
+                view.subviews.forEach { $0.removeFromSuperview() }
                 view.addSubview(_view)
             }
             Logging.l(tag: "MapLibre", "Annotation view reused for \(identifer)")
@@ -260,7 +261,9 @@ extension MapLibreWrapperModel: MLNMapViewDelegate {
 
         self.isMapLoaded = true
         self.drainPendingActionsIfReady()
-        self.interactionDelegate?.mapDidLoaded()
+        Task { @MainActor in
+            self.interactionDelegate?.mapDidLoaded()
+        }
     }
 
     public func mapViewDidFailLoadingMap(_ mapView: MLNMapView, withError error: Error) {
