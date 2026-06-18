@@ -78,4 +78,25 @@ final class NavigationRouteTrackingManagerTests: XCTestCase {
             XCTFail("Expected outOfRoute")
         }
     }
+
+    func testOverlappingRouteDoesNotJumpBackToEarlierSegment() throws {
+        let start = CLLocationCoordinate2D(latitude: 0, longitude: 0)
+        let turnAround = CLLocationCoordinate2D(latitude: 0, longitude: 0.001)
+        let coordinates = [start, turnAround, start]
+
+        let manager = NavigationRouteTrackingManager(routeCoordinates: coordinates, threshold: 30)
+
+        _ = manager.updateDriverLocation(CLLocationCoordinate2D(latitude: 0, longitude: 0.00095))
+        let status = manager.updateDriverLocation(CLLocationCoordinate2D(latitude: 0, longitude: 0.00075))
+
+        guard case .onTrack(_, let remainingPath) = status else {
+            XCTFail("Expected onTrack")
+            return
+        }
+
+        XCTAssertEqual(remainingPath.count, 2)
+        let nextCoordinate = try XCTUnwrap(remainingPath.dropFirst().first)
+        XCTAssertEqual(nextCoordinate.latitude, start.latitude, accuracy: 0.000001)
+        XCTAssertEqual(nextCoordinate.longitude, start.longitude, accuracy: 0.000001)
+    }
 }

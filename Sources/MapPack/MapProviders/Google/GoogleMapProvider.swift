@@ -97,7 +97,7 @@ class UserLocationMarkerView: UIView {
 }
 
 /// Implementation of the map provider protocol for Google Maps
-public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, CLLocationManagerDelegate {
+public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     private(set) var viewModel: GoogleMapsViewWrapperModel = .init()
     
     public private(set) var polylines: [String : UniversalMapPolyline] = [:]
@@ -108,8 +108,6 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     private let userLocationMarkerId = "USER_LOCATION_MARKER"
     private var shouldShowUserLocation: Bool = false
     private var lastKnownLocation: CLLocation?
-    
-    private let locationManager = CLLocationManager()
     
     public var currentLocation: CLLocation? {
         lastKnownLocation ?? self.viewModel.mapView?.myLocation
@@ -126,7 +124,6 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     
     required public override init() {
         super.init()
-        locationManager.delegate = self
     }
     
     public func showUserLocationAccuracy(_ show: Bool) {
@@ -328,17 +325,14 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
             // Custom marker mode
             viewModel.mapView?.isMyLocationEnabled = false
             if show {
-                 locationManager.startUpdatingLocation()
                  // Trigger an update if we have a location
                  if let loc = currentLocation {
                      updateUserLocation(loc)
                  }
             } else {
-                 locationManager.stopUpdatingLocation()
                  viewModel.removeMarker(id: userLocationMarkerId)
             }
         } else {
-            locationManager.stopUpdatingLocation()
             viewModel.mapView?.isMyLocationEnabled = show
             if !show {
                 viewModel.removeMarker(id: userLocationMarkerId)
@@ -355,6 +349,10 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     }
     
     public func setUserTrackingMode(mode: UserLocationtrackingMode) {
+        guard mode != .none else {
+            return
+        }
+
         if capabilities.contains(.userTrackingMode) {
              // Implementation would go here
         } else {
@@ -416,9 +414,4 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         self.viewModel.zoomOut(minLevel: minLevel, shift: shift)
     }
     
-    // MARK: - CLLocationManagerDelegate
-    public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-        updateUserLocation(location)
-    }
 }

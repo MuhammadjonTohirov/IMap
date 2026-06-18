@@ -6,7 +6,8 @@ import Combine
 import NavigationTrackingCore
 
 /// Centralized location tracking manager
-public class LocationTrackingManager: NSObject, ObservableObject {
+@MainActor
+public final class LocationTrackingManager: NSObject, ObservableObject {
     // MARK: - Published Properties
     @Published public private(set) var trackingMode: MapTrackingMode = .none
     @Published public var currentLocation: CLLocation?
@@ -45,6 +46,8 @@ public class LocationTrackingManager: NSObject, ObservableObject {
     /// Distance (meters) that forces an immediate update regardless of the interval.
     private let locationUpdateDistanceThreshold: CLLocationDistance = 5
 
+    private var isUserLocationDisplayActive: Bool = false
+
     // MARK: - Initialization
     public override init() {
         super.init()
@@ -67,6 +70,16 @@ public class LocationTrackingManager: NSObject, ObservableObject {
     public func setDefaultZoomLevel(_ zoom: Double) {
         self.defaultZoomLevel = zoom
     }
+
+    public func setUserLocationDisplayEnabled(_ enabled: Bool) {
+        isUserLocationDisplayActive = enabled
+
+        if enabled {
+            startLocationUpdates()
+        } else if trackingMode == .none {
+            stopLocationUpdates()
+        }
+    }
     
     // MARK: - Private Methods
     
@@ -74,11 +87,6 @@ public class LocationTrackingManager: NSObject, ObservableObject {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 5 // Update every 5 meters
-        
-        // Request permission immediately if not determined
-        if locationManager.authorizationStatus == .notDetermined {
-            locationManager.requestWhenInUseAuthorization()
-        }
     }
     
     private func requestLocationPermission() {
@@ -101,17 +109,13 @@ public class LocationTrackingManager: NSObject, ObservableObject {
     }
     
     private func startLocationUpdates() {
-        Task {
-            guard CLLocationManager.locationServicesEnabled() else {
-                let error = NSError(domain: "LocationTracking", code: 2, userInfo: [NSLocalizedDescriptionKey: "Location services disabled"])
-                delegate?.trackingDidFail(error: error)
-                return
-            }
-            
-            Task { @MainActor in
-                self.requestLocationPermission()
-            }
+        guard CLLocationManager.locationServicesEnabled() else {
+            let error = NSError(domain: "LocationTracking", code: 2, userInfo: [NSLocalizedDescriptionKey: "Location services disabled"])
+            delegate?.trackingDidFail(error: error)
+            return
         }
+
+        requestLocationPermission()
     }
     
     private func stopLocationUpdates() {
@@ -275,8 +279,9 @@ extension LocationTrackingManager: LocationTrackingProtocol {
         followCoordinateTrail.removeAll()
         isTrackingActive = false
 
-        // Stop location updates
-        stopLocationUpdates()
+        if !isUserLocationDisplayActive {
+            stopLocationUpdates()
+        }
         
         // Notify delegate
         delegate?.trackingDidStop()
@@ -387,7 +392,7 @@ extension LocationTrackingManager: CLLocationManagerDelegate {
         switch status {
         case .authorizedWhenInUse, .authorizedAlways:
             Logging.l(tag: "LocationTracking", "Location authorized, checking if tracking should start...")
-            if isTrackingActive && trackingMode != .none {
+            if isUserLocationDisplayActive || (isTrackingActive && trackingMode != .none) {
                 Logging.l(tag: "LocationTracking", "Restarting location updates after authorization")
                 locationManager.startUpdatingLocation()
             }

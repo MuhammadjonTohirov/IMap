@@ -54,7 +54,9 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         }
         
         didAppear = true
-        self.interactionDelegate?.mapDidLoaded()
+        Task { @MainActor in
+            self.interactionDelegate?.mapDidLoaded()
+        }
     }
     
     @MainActor

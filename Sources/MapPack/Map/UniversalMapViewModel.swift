@@ -11,6 +11,7 @@ import SwiftUI
 import CoreLocation
 import Combine
 
+@MainActor
 public protocol UniversalMapViewModelDelegate: AnyObject {
     func mapDidStartDragging(map: MapProviderProtocol)
     func mapDidStartMoving(map: MapProviderProtocol)
@@ -41,6 +42,7 @@ public struct AddressInfo {
 }
 
 /// View model for the Universal Map
+@MainActor
 public class UniversalMapViewModel: ObservableObject {
     // MARK: - Components
     @Published public var uiState = MapUIState()
@@ -55,14 +57,14 @@ public class UniversalMapViewModel: ObservableObject {
         set {
             uiState.showUserLocation = newValue
             mapProviderInstance.showUserLocation(newValue)
+            locationTrackingManager.setUserLocationDisplayEnabled(newValue)
         }
     }
     
     public var userTrackingMode: UserLocationtrackingMode {
         get { uiState.userTrackingMode }
         set {
-            uiState.userTrackingMode = newValue
-            mapProviderInstance.setUserTrackingMode(mode: newValue)
+            _ = applyUserTrackingMode(newValue)
         }
     }
     
@@ -102,9 +104,7 @@ public class UniversalMapViewModel: ObservableObject {
     // Private properties
     public private(set) var mapProviderInstance: MapProviderProtocol
     
-    private var markersById: [String: any UniversalMapMarkerProtocol] {
-        mapProviderInstance.markers
-    }
+    private var markersById: [String: any UniversalMapMarkerProtocol] = [:]
     
     var polylines: [UniversalMapPolyline] {
         Array(polylinesById.values)
@@ -141,7 +141,7 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     deinit {
-        debugPrint("UniversalMapViewModel: Deinit")
+        Logging.l(tag: "UniversalMapViewModel", "Deinit")
     }
     
     public func set(config: any MapConfigProtocol) {
@@ -170,13 +170,15 @@ public class UniversalMapViewModel: ObservableObject {
 
         // Set delegation
         mapProviderInstance.setInteractionDelegate(self)
+
+        if let config {
+            set(config: config)
+        } else {
+            set(config: self.config)
+        }
         
         // Reapply current configuration to the new provider
         updateMapProviderConfiguration()
-        
-        if let config {
-            set(config: config)
-        }
     }
     
     public func getCamera(animate: Bool = true) -> UniversalMapCamera? {
@@ -249,8 +251,9 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     /// Enable or disable user tracking mode
-    public func setUserTrackingMode(_ mode: UserLocationtrackingMode) {
-        self.userTrackingMode = mode // Goes through setter
+    @discardableResult
+    public func setUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool {
+        applyUserTrackingMode(mode)
     }
     
     /// Set the map edge insets
@@ -261,6 +264,7 @@ public class UniversalMapViewModel: ObservableObject {
     /// Add a marker to the map
     @discardableResult
     public func addMarker(_ marker: any UniversalMapMarkerProtocol) -> String {
+        markersById[marker.id] = marker
         mapProviderInstance.addMarker(marker)
         locationTrackingManager.handleMarkerUpdate(marker)
         return marker.id
@@ -271,17 +275,26 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     public func updateMarker(_ marker: any UniversalMapMarkerProtocol) {
-        mapProviderInstance.updateMarker(marker)
+        let didAlreadyKnowMarker = markersById[marker.id] != nil
+        markersById[marker.id] = marker
+
+        if didAlreadyKnowMarker {
+            mapProviderInstance.updateMarker(marker)
+        } else {
+            mapProviderInstance.addMarker(marker)
+        }
         locationTrackingManager.handleMarkerUpdate(marker)
     }
     
     /// Remove a marker from the map
     public func removeMarker(withId id: String) {
+        markersById.removeValue(forKey: id)
         mapProviderInstance.removeMarker(withId: id)
     }
     
     /// Remove all markers from the map
     public func clearAllMarkers() {
+        markersById.removeAll()
         mapProviderInstance.clearAllMarkers()
     }
     
@@ -395,7 +408,7 @@ public class UniversalMapViewModel: ObservableObject {
     @MainActor
     public func set(polylines: [UniversalMapPolyline], animated: Bool = false) {
         polylines.forEach { line in
-            self.mapProviderInstance.addPolyline(line, animated: animated)
+            self.addPolyline(line, animated: animated)
         }
     }
     
@@ -443,12 +456,12 @@ public class UniversalMapViewModel: ObservableObject {
         }
         
         mapProviderInstance.showUserLocation(uiState.showUserLocation)
-        mapProviderInstance.setUserTrackingMode(mode: uiState.userTrackingMode)
+        _ = applyUserTrackingMode(uiState.userTrackingMode)
         mapProviderInstance.setEdgeInsets(uiState.edgeInsets)
         
         // Re-add all markers
         for marker in markersById.values {
-            mapProviderInstance.updateMarker(marker)
+            mapProviderInstance.addMarker(marker)
         }
         
         // Re-add all polylines
@@ -456,26 +469,29 @@ public class UniversalMapViewModel: ObservableObject {
             mapProviderInstance.addPolyline(polyline, animated: false)
         }
     }
+
+    @discardableResult
+    private func applyUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool {
+        let isSupported = mode == .none || mapProviderInstance.capabilities.contains(.userTrackingMode)
+        let appliedMode: UserLocationtrackingMode = isSupported ? mode : .none
+        uiState.userTrackingMode = appliedMode
+        mapProviderInstance.setUserTrackingMode(mode: appliedMode)
+        return isSupported
+    }
 }
 
 // MARK: - LocationTrackingDelegate Implementation
 extension UniversalMapViewModel: LocationTrackingDelegate {
     public func trackingDidStart(mode: MapTrackingMode) {
-        DispatchQueue.main.async {
-            self.objectWillChange.send()
-        }
+        objectWillChange.send()
     }
     
     public func trackingDidStop() {
-        DispatchQueue.main.async {
-            self.objectWillChange.send()
-        }
+        objectWillChange.send()
     }
     
     public func trackingDidFail(error: Error) {
-        DispatchQueue.main.async {
-            self.objectWillChange.send()
-        }
+        objectWillChange.send()
     }
 }
 

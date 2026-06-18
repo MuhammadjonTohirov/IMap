@@ -44,8 +44,9 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?
     private var showsUserLocation: Bool = true
+    private var requestedUserTrackingMode: UserLocationtrackingMode = .none
     public var userTrackingMode: MLNUserTrackingMode? {
-        self.viewModel.mapView?.userTrackingMode
+        requestedUserTrackingMode.maplibre
     }
     
     public var currentLocation: CLLocation? {
@@ -240,7 +241,8 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func setUserTrackingMode(mode: UserLocationtrackingMode) {
-        self.viewModel.mapView?.userTrackingMode = mode.maplibre
+        requestedUserTrackingMode = mode
+        viewModel.setUserTrackingMode(mode)
     }
     
     public func showUserLocationAccuracy(_ show: Bool) {
@@ -302,7 +304,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
                 camera: mapCamera,
                 styleUrl: viewModel.config?.lightStyle,
                 inset: mapInsets,
-                trackingMode: userTrackingMode,
+                trackingMode: requestedUserTrackingMode.maplibre,
                 showsUserLocation: showsUserLocation
             )
         )
@@ -316,9 +318,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
             camera: mapCamera,
             styleUrl: viewModel.config?.lightStyle,
             inset: mapInsets,
-            trackingMode: userTrackingMode,
             showsUserLocation: showsUserLocation
         )
     }
 }
-

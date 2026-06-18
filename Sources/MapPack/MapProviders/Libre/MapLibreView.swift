@@ -43,9 +43,7 @@ struct MapLibreMapView: View {
                 mapView.showsUserLocation = true
 
                 // Re-apply tracking mode if it was lost during the permission change
-                if let mode = trackingMode {
-                    mapView.userTrackingMode = mode
-                }
+                mapView.userTrackingMode = viewModel.requestedUserTrackingMode.maplibre
             }
         }
         .onAppear {
