@@ -139,7 +139,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         requestedUserTrackingMode = mode
         mapView?.showsUserHeadingIndicator = true
         mapView?.userTrackingMode = mode.maplibre
-        refreshUserLocationViewRotation(mapBearing: mapView?.camera.heading ?? 0)
+        refreshUserLocationViewRotation(mapBearing: currentMapBearing)
     }
     
     @MainActor
@@ -398,10 +398,17 @@ extension MapLibreWrapperModel {
 }
 
 extension MapLibreWrapperModel {
+    /// Current map heading (bearing) in degrees clockwise from true north.
+    /// `MLNMapView.camera.heading` does not reflect live gesture rotation (it stays 0),
+    /// so the rotation-compensation path reads `direction`, the dedicated bearing API.
+    var currentMapBearing: CLLocationDirection {
+        mapView?.direction ?? 0
+    }
+
     func refreshAllMarkerViewRotations() {
         // Only markers that compensate for the map bearing change their displayed
         // angle when the camera moves; others are refreshed on their own update.
-        let bearing = mapView?.camera.heading ?? 0
+        let bearing = currentMapBearing
         if let last = lastMarkerViewBearing, abs(bearing - last) <= 0.0001 {
             return
         }
@@ -463,7 +470,7 @@ extension MapLibreWrapperModel {
 
         return MapLibreUserLocationIconRotation.displayRotation(
             for: heading,
-            mapBearing: mapBearing ?? mapView.camera.heading,
+            mapBearing: mapBearing ?? mapView.direction,
             usesNativeRotatingTrackingMode: usesNativeRotatingTrackingMode
         )
     }
@@ -484,7 +491,7 @@ extension MapLibreWrapperModel {
             return (.pi / 180) * CGFloat(normalizedHeading(markerHeading))
         }
         
-        let mapBearing = mapView?.camera.heading ?? 0
+        let mapBearing = currentMapBearing
         let displayHeading = normalizedHeading(markerHeading - mapBearing)
         return (.pi / 180) * CGFloat(displayHeading)
     }
