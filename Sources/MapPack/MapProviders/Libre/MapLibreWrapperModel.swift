@@ -346,7 +346,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         }
 
         userLocationWorldHeading = heading
-        view.setDisplayRotation(displayRotation(for: heading, mapView: mapView, mapBearing: mapBearing))
+        view.setDisplayRotation(displayRotation(for: heading, mapView: mapView))
     }
 }
 
@@ -422,7 +422,7 @@ extension MapLibreWrapperModel {
               let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView else {
             return
         }
-        view.setDisplayRotation(displayRotation(for: heading, mapView: mapView))
+        view.setDisplayRotation(displayRotation(for: heading, mapView: mapView, mapBearing: mapBearing))
     }
 
     private func userLocationHeading(
