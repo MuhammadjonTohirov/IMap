@@ -96,7 +96,7 @@ public final class LocationTrackingManager: NSObject, ObservableObject {
             locationManager.requestWhenInUseAuthorization()
         case .denied, .restricted:
             Logging.l(tag: "LocationTracking", "Location permission denied or restricted")
-            let error = NSError(domain: "LocationTracking", code: 1, userInfo: [NSLocalizedDescriptionKey: "Location permission denied. Please enable location access in Settings."])
+            let error = NSError(domain: "LocationTracking", code: 1, userInfo: [NSLocalizedDescriptionKey: "Location permission denied or Location Services disabled. Please enable location access in Settings."])
             delegate?.trackingDidFail(error: error)
             stopTracking()
         case .authorizedWhenInUse, .authorizedAlways:
@@ -107,14 +107,33 @@ public final class LocationTrackingManager: NSObject, ObservableObject {
             break
         }
     }
+
+    private func handleAuthorizationStatusChange(_ status: CLAuthorizationStatus) {
+        switch status {
+        case .authorizedWhenInUse, .authorizedAlways:
+            Logging.l(tag: "LocationTracking", "Location authorized, checking if tracking should start...")
+            if isUserLocationDisplayActive || (isTrackingActive && trackingMode != .none) {
+                Logging.l(tag: "LocationTracking", "Restarting location updates after authorization")
+                locationManager.startUpdatingLocation()
+            }
+        case .denied, .restricted:
+            Logging.l(tag: "LocationTracking", "Location access denied or restricted")
+            let error = NSError(
+                domain: "LocationTracking",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Location permission denied or Location Services disabled. Please enable location access in Settings."]
+            )
+            delegate?.trackingDidFail(error: error)
+            stopTracking()
+        case .notDetermined:
+            Logging.l(tag: "LocationTracking", "Location authorization not determined")
+        @unknown default:
+            Logging.l(tag: "LocationTracking", "Unknown authorization status: \(status.rawValue)")
+            break
+        }
+    }
     
     private func startLocationUpdates() {
-        guard CLLocationManager.locationServicesEnabled() else {
-            let error = NSError(domain: "LocationTracking", code: 2, userInfo: [NSLocalizedDescriptionKey: "Location services disabled"])
-            delegate?.trackingDidFail(error: error)
-            return
-        }
-
         requestLocationPermission()
     }
     
@@ -345,7 +364,7 @@ extension LocationTrackingManager: CLLocationManagerDelegate {
             // Don't stop tracking for this error, just log it
             return
         case .denied:
-            errorMessage = "Location access denied. Please enable location access in Settings."
+            errorMessage = "Location access denied or Location Services disabled. Please enable location access in Settings."
         case .network:
             errorMessage = "Network error occurred while getting location"
         case .headingFailure:
@@ -385,33 +404,12 @@ extension LocationTrackingManager: CLLocationManagerDelegate {
         }
     }
     
-    public func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+    public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
         let authString = authorizationStatusString(status)
         Logging.l(tag: "LocationTracking", "Authorization status changed to: \(authString)")
-        
-        switch status {
-        case .authorizedWhenInUse, .authorizedAlways:
-            Logging.l(tag: "LocationTracking", "Location authorized, checking if tracking should start...")
-            if isUserLocationDisplayActive || (isTrackingActive && trackingMode != .none) {
-                Logging.l(tag: "LocationTracking", "Restarting location updates after authorization")
-                locationManager.startUpdatingLocation()
-            }
-        case .denied, .restricted:
-            Logging.l(tag: "LocationTracking", "Location access denied or restricted")
-            let error = NSError(
-                domain: "LocationTracking",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Location permission denied. Please enable location access in Settings."]
-            )
-            delegate?.trackingDidFail(error: error)
-            stopTracking()
-        case .notDetermined:
-            Logging.l(tag: "LocationTracking", "Location authorization not determined")
-            // Wait for user to respond to permission request
-        @unknown default:
-            Logging.l(tag: "LocationTracking", "Unknown authorization status: \(status.rawValue)")
-            break
-        }
+
+        handleAuthorizationStatusChange(status)
     }
     
     private func authorizationStatusString(_ status: CLAuthorizationStatus) -> String {
