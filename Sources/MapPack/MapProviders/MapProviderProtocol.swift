@@ -82,12 +82,21 @@ public protocol MapPolylineManageable: AnyObject {
 /// Protocol for managing user location display and tracking
 public protocol MapUserLocationDisplayable: AnyObject {
     var currentLocation: CLLocation? { get }
-    
+
+    /// Whether a custom current-location icon is currently set on this provider.
+    ///
+    /// Drives how `UniversalMapViewModel` applies a user-tracking mode: when `true`, the
+    /// SDK's native tracking can't follow the icon (Google renders it as a separate
+    /// marker), so the camera is driven by the in-house `LocationTrackingManager`
+    /// follow instead of `setUserTrackingMode(mode:)`. Declared as a protocol
+    /// requirement so it dispatches to each provider rather than the default below.
+    var hasCustomUserLocationIcon: Bool { get }
+
     /// Show or hide the user's location
     func showUserLocation(_ show: Bool)
     
     /// Enable or disable user tracking mode
-    func setUserTrackingMode(_ tracking: Bool)
+    func setUserTrackingMode(mode: UserLocationtrackingMode)
     
     func setUserLocationIcon(_ image: UIImage?, scale: CGFloat)
     
@@ -179,19 +188,23 @@ public extension MapCameraControllable {
 }
 
 public extension MapProviderProtocol {
-    // These overloads were in the original extension but not the protocol definition.
-    // Keeping them here for backward compatibility.
-    
+    /// Convenience overloads that default to an animated focus and forward to the
+    /// provider's real implementation, rather than silently doing nothing.
+
     func focusOnPolyline(id: String, padding: UIEdgeInsets) {
-        // Default empty implementation - original behavior
+        focusOnPolyline(id: id, padding: padding, animated: true)
     }
-    
+
     func focusOnPolyline(id: String) {
-        // Default empty implementation - original behavior
+        focusOnPolyline(id: id, animated: true)
     }
 }
 
 public extension MapUserLocationDisplayable {
+    /// Providers without a custom-icon concept report `false`, so the view model always
+    /// falls back to native tracking for them.
+    var hasCustomUserLocationIcon: Bool { false }
+
     func setUserLocationIcon(_ image: UIImage?, scale: CGFloat) {}
 
     func updateUserLocation(_ location: CLLocation) {}

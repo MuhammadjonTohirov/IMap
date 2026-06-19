@@ -10,6 +10,7 @@ import Foundation
 import CoreLocation
 
 /// Protocol for handling map interaction events
+@MainActor
 public protocol MapInteractionDelegate: AnyObject {
     /// Called when the map starts being dragged by the user
     func mapDidStartDragging()
@@ -27,6 +28,8 @@ public protocol MapInteractionDelegate: AnyObject {
     func mapDidTap(at coordinate: CLLocationCoordinate2D)
     
     func mapDidLoaded()
+    
+    func mapDidRotate(to coordinate: CLLocationCoordinate2D)
 }
 
 // Default implementation
@@ -37,4 +40,5 @@ public extension MapInteractionDelegate {
     func mapDidTapMarker(id: String) -> Bool { false }
     func mapDidTap(at coordinate: CLLocationCoordinate2D) {}
     func mapDidLoaded() {}
+    func mapDidRotate(to coordinate: CLLocationCoordinate2D) {}
 }

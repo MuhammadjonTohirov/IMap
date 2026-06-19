@@ -44,11 +44,6 @@ public class PinViewModel: ObservableObject {
     }
     
     open func set(state: PinState) {
-        debugPrint("Set pin state \(state.id)")
-        if state == .initial {
-            print(#file, #function, #line)
-        }
-        
         withAnimation(.easeInOut(duration: 0.2)) {
             self.state = state
         }

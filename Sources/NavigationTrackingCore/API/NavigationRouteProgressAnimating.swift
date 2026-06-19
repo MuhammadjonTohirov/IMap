@@ -1,5 +1,6 @@
 import CoreLocation
 
+@MainActor
 public protocol NavigationRouteProgressAnimating: AnyObject {
     func animate(
         from startProgress: CLLocationDistance,

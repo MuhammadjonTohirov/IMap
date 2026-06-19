@@ -3,6 +3,17 @@
 import Foundation
 import CoreLocation
 
+/// Orientation of the follow camera, used for both current-location and marker follow.
+public enum CameraFollowMode: Equatable {
+    /// The camera keeps a fixed north-up bearing; only its center follows the target.
+    case northUp
+    /// The camera rotates so the target's heading points up (course-up navigation).
+    case courseUp
+}
+
+/// Legacy name retained for source compatibility.
+public typealias MarkerFollowMode = CameraFollowMode
+
 /// Represents different tracking modes for the map camera
 public enum MapTrackingMode: Equatable {
     case none
@@ -24,19 +35,42 @@ public enum MapTrackingMode: Equatable {
 }
 
 /// Protocol for location tracking capabilities
+@MainActor
 public protocol LocationTrackingProtocol: AnyObject {
     /// Current tracking mode
     var trackingMode: MapTrackingMode { get }
     
-    /// Start tracking current location
-    /// - Parameter zoom: Optional zoom level (uses default if nil)
-    func trackCurrentLocationOnMap(zoom: Double?)
+    /// Start tracking current location with camera following.
+    /// - Parameters:
+    ///   - zoom: Optional zoom level (uses default if nil)
+    ///   - mode: Camera orientation while following. Course-up rotates the map to the
+    ///     device's travel direction (`CLLocation.course`).
+    ///   - pitch: Camera pitch in degrees (0 = looking straight down)
+    ///   - followAnimationDuration: Duration used when the follow camera animates
+    ///     (north-up moves). Course-up follows the heading instantly.
+    func trackCurrentLocationOnMap(
+        zoom: Double?,
+        mode: CameraFollowMode,
+        pitch: Double,
+        followAnimationDuration: TimeInterval?
+    )
     
     /// Start tracking a specific marker
     /// - Parameters:
     ///   - markerId: ID of the marker to track
     ///   - zoom: Optional zoom level (uses default if nil)
-    func trackMarker(_ markerId: String, zoom: Double?)
+    ///   - mode: Camera orientation while following (north-up or course-up)
+    ///   - pitch: Camera pitch in degrees (0 = looking straight down)
+    ///   - followAnimationDuration: Duration used when the follow camera animates
+    ///     (north-up moves). When `nil`, the provider's default is used. Course-up
+    ///     follows the heading instantly regardless of this value.
+    func trackMarker(
+        _ markerId: String,
+        zoom: Double?,
+        mode: CameraFollowMode,
+        pitch: Double,
+        followAnimationDuration: TimeInterval?
+    )
     
     /// Stop all tracking
     func stopTracking()
@@ -49,6 +83,7 @@ public protocol LocationTrackingProtocol: AnyObject {
 }
 
 /// Delegate for location tracking events
+@MainActor
 public protocol LocationTrackingDelegate: AnyObject {
     func trackingDidStart(mode: MapTrackingMode)
     func trackingDidStop()

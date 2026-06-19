@@ -23,18 +23,23 @@ public struct UniversalMapCamera {
     public var pitch: Double
     /// Whether camera changes should be animated
     public var animate: Bool
-    
+    /// The animation duration in seconds when `animate` is `true`.
+    /// When `nil`, the provider uses its default animation duration.
+    public var animationDuration: TimeInterval?
+
     public init(
         center: CLLocationCoordinate2D,
         zoom: Double = 15,
         bearing: Double = 0,
         pitch: Double = 0,
-        animate: Bool = true
+        animate: Bool = true,
+        animationDuration: TimeInterval? = nil
     ) {
         self.center = center
         self.zoom = zoom
         self.bearing = bearing
         self.pitch = pitch
         self.animate = animate
+        self.animationDuration = animationDuration
     }
 }

@@ -39,14 +39,11 @@ public class GoogleMapViewController: UIViewController {
     }
     
     open override func loadView() {
-        super.loadView()
+        view = map
     }
     
     open override func viewDidAppear(_ animated: Bool) {
-        self.view.addSubview(map)
-        
-        map.autoresizingMask = [.flexibleWidth, .flexibleHeight, .flexibleTopMargin, .flexibleBottomMargin]
-        
+        super.viewDidAppear(animated)
         map.animate(toViewingAngle: GMapStatics.viewAngle)
     }
     
@@ -80,12 +77,11 @@ public extension GMSMapView {
         
         let coordinate = self.projection.coordinate(for: visualCenter)
         
-        // Debug logs
-        debugPrint("GMSMapView", "Map bounds: \(self.bounds)")
-        debugPrint("GMSMapView", "Map padding: \(self.padding)")
-        debugPrint("GMSMapView", "Padding offset: \(paddingOffset)")
-        debugPrint("GMSMapView", "Visual center point: \(visualCenter)")
-        debugPrint("GMSMapView", "Resulting coordinate: \(coordinate)")
+        Logging.l(tag: "GMSMapView", "Map bounds: \(self.bounds)")
+        Logging.l(tag: "GMSMapView", "Map padding: \(self.padding)")
+        Logging.l(tag: "GMSMapView", "Padding offset: \(paddingOffset)")
+        Logging.l(tag: "GMSMapView", "Visual center point: \(visualCenter)")
+        Logging.l(tag: "GMSMapView", "Resulting coordinate: \(coordinate)")
         
         return CLLocation(
             latitude: coordinate.latitude,

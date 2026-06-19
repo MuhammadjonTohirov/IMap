@@ -6,11 +6,13 @@
 //
 
 import Foundation
+import os
 
 struct Logging {
     static func l(tag: String = "MapPack", _ message: @autoclosure @escaping () -> String) {
         #if DEBUG
-        print("[\(tag)] \(message())")
+        Logger(subsystem: "MapPack", category: tag)
+            .debug("\(message(), privacy: .public)")
         #endif
     }
 }

@@ -97,7 +97,7 @@ class UserLocationMarkerView: UIView {
 }
 
 /// Implementation of the map provider protocol for Google Maps
-public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, CLLocationManagerDelegate {
+public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     private(set) var viewModel: GoogleMapsViewWrapperModel = .init()
     
     public private(set) var polylines: [String : UniversalMapPolyline] = [:]
@@ -109,12 +109,17 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     private var shouldShowUserLocation: Bool = false
     private var lastKnownLocation: CLLocation?
     
-    private let locationManager = CLLocationManager()
-    
     public var currentLocation: CLLocation? {
         lastKnownLocation ?? self.viewModel.mapView?.myLocation
     }
-    
+
+    /// A custom icon is drawn as a separate marker with `isMyLocationEnabled` off, so
+    /// only the custom camera controller can follow it — never Google's native tracking
+    /// (which is a stub here anyway).
+    public var hasCustomUserLocationIcon: Bool {
+        userLocationImage != nil
+    }
+
     public var markers: [String : any UniversalMapMarkerProtocol] {
         viewModel.allMarkers
     }
@@ -126,7 +131,6 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     
     required public override init() {
         super.init()
-        locationManager.delegate = self
     }
     
     public func showUserLocationAccuracy(_ show: Bool) {
@@ -172,15 +176,19 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
              m.groundAnchor = CGPoint(x: 0.5, y: 0.5)
              m.zIndex = 1000 // High zIndex
              m.tracksViewChanges = true // Essential for animation
+             // Rotate the icon to the travel direction, compensated for the map bearing.
+             m.set(compensatesForMapBearing: true)
+             if location.course >= 0 { m.set(heading: location.course) }
              viewModel.addMarker(id: userLocationMarkerId, marker: m)
              
              // Initial update
              container.update(accuracy: location.horizontalAccuracy, zoom: viewModel.mapView?.camera.zoom ?? 15, latitude: location.coordinate.latitude)
         } else {
-             // Update position
+             // Update position and travel-direction heading
              let m = viewModel.allMarkers[userLocationMarkerId]
              m?.set(coordinate: location.coordinate)
-             
+             if location.course >= 0 { m?.set(heading: location.course) }
+
              if let container = m?.iconView as? UserLocationMarkerView {
                  container.update(accuracy: location.horizontalAccuracy, zoom: viewModel.mapView?.camera.zoom ?? 15, latitude: location.coordinate.latitude)
              }
@@ -192,13 +200,45 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
     }
     
     public func updateCamera(to camera: UniversalMapCamera) {
+        let position = GMSCameraPosition(
+            target: camera.center,
+            zoom: Float(camera.zoom),
+            bearing: camera.bearing,
+            viewingAngle: camera.pitch
+        )
+
         if camera.animate {
-            viewModel.mapView?.animate(to: .camera(withTarget: camera.center, zoom: Float(camera.zoom)))
+            if let duration = camera.animationDuration {
+                CATransaction.begin()
+                CATransaction.setAnimationDuration(duration)
+                viewModel.mapView?.animate(to: position)
+                CATransaction.commit()
+            } else {
+                viewModel.mapView?.animate(to: position)
+            }
         } else {
-            viewModel.mapView?.camera = .camera(withTarget: camera.center, zoom: Float(camera.zoom))
+            viewModel.mapView?.camera = position
         }
     }
-    
+
+    /// Rotate the map to `bearing` (degrees clockwise from true north), leaving
+    /// the center, zoom, and pitch unchanged.
+    func setBearing(_ bearing: CLLocationDirection, animate: Bool) {
+        guard let mapView = viewModel.mapView else { return }
+        let current = mapView.camera
+        let rotated = GMSCameraPosition(
+            target: current.target,
+            zoom: current.zoom,
+            bearing: bearing,
+            viewingAngle: current.viewingAngle
+        )
+        if animate {
+            mapView.animate(to: rotated)
+        } else {
+            mapView.camera = rotated
+        }
+    }
+
     public func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {
         viewModel.mapView?.padding.top = insets.insets.top
         viewModel.mapView?.padding.left = insets.insets.left
@@ -292,17 +332,14 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
             // Custom marker mode
             viewModel.mapView?.isMyLocationEnabled = false
             if show {
-                 locationManager.startUpdatingLocation()
                  // Trigger an update if we have a location
                  if let loc = currentLocation {
                      updateUserLocation(loc)
                  }
             } else {
-                 locationManager.stopUpdatingLocation()
                  viewModel.removeMarker(id: userLocationMarkerId)
             }
         } else {
-            locationManager.stopUpdatingLocation()
             viewModel.mapView?.isMyLocationEnabled = show
             if !show {
                 viewModel.removeMarker(id: userLocationMarkerId)
@@ -318,7 +355,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         viewModel.mapView?.setMinZoom(Float(min), maxZoom: Float(max))
     }
     
-    public func setUserTrackingMode(_ tracking: Bool) {
+    public func setUserTrackingMode(mode: UserLocationtrackingMode) {
+        guard mode != .none else {
+            return
+        }
+
         if capabilities.contains(.userTrackingMode) {
              // Implementation would go here
         } else {
@@ -380,9 +421,4 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol, 
         self.viewModel.zoomOut(minLevel: minLevel, shift: shift)
     }
     
-    // MARK: - CLLocationManagerDelegate
-    public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
-        updateUserLocation(location)
-    }
 }

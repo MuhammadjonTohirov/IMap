@@ -4,7 +4,7 @@ import NavigationTrackingCore
 
 final class NavigationRouteTrackingManagerTests: XCTestCase {
 
-    func testDriverOnTrack() {
+    func testDriverOnTrack() throws {
         // Create a simple straight line route: (0,0) -> (0, 0.001) ~111m long
         let start = CLLocationCoordinate2D(latitude: 0, longitude: 0)
         let end = CLLocationCoordinate2D(latitude: 0, longitude: 0.001)
@@ -23,10 +23,12 @@ final class NavigationRouteTrackingManagerTests: XCTestCase {
             XCTAssertEqual(snapped.longitude, 0.0005, accuracy: 0.000001)
 
             // Remaining path should start at snapped point
-            XCTAssertEqual(remainingPath.first?.latitude, 0, accuracy: 0.000001)
-            XCTAssertEqual(remainingPath.first?.longitude, 0.0005, accuracy: 0.000001)
-            XCTAssertEqual(remainingPath.last?.latitude, 0, accuracy: 0.000001)
-            XCTAssertEqual(remainingPath.last?.longitude, 0.001, accuracy: 0.000001)
+            let firstCoordinate = try XCTUnwrap(remainingPath.first)
+            let lastCoordinate = try XCTUnwrap(remainingPath.last)
+            XCTAssertEqual(firstCoordinate.latitude, 0, accuracy: 0.000001)
+            XCTAssertEqual(firstCoordinate.longitude, 0.0005, accuracy: 0.000001)
+            XCTAssertEqual(lastCoordinate.latitude, 0, accuracy: 0.000001)
+            XCTAssertEqual(lastCoordinate.longitude, 0.001, accuracy: 0.000001)
         } else {
             XCTFail("Expected onTrack")
         }
@@ -75,5 +77,26 @@ final class NavigationRouteTrackingManagerTests: XCTestCase {
         } else {
             XCTFail("Expected outOfRoute")
         }
+    }
+
+    func testOverlappingRouteDoesNotJumpBackToEarlierSegment() throws {
+        let start = CLLocationCoordinate2D(latitude: 0, longitude: 0)
+        let turnAround = CLLocationCoordinate2D(latitude: 0, longitude: 0.001)
+        let coordinates = [start, turnAround, start]
+
+        let manager = NavigationRouteTrackingManager(routeCoordinates: coordinates, threshold: 30)
+
+        _ = manager.updateDriverLocation(CLLocationCoordinate2D(latitude: 0, longitude: 0.00095))
+        let status = manager.updateDriverLocation(CLLocationCoordinate2D(latitude: 0, longitude: 0.00075))
+
+        guard case .onTrack(_, let remainingPath) = status else {
+            XCTFail("Expected onTrack")
+            return
+        }
+
+        XCTAssertEqual(remainingPath.count, 2)
+        let nextCoordinate = try XCTUnwrap(remainingPath.dropFirst().first)
+        XCTAssertEqual(nextCoordinate.latitude, start.latitude, accuracy: 0.000001)
+        XCTAssertEqual(nextCoordinate.longitude, start.longitude, accuracy: 0.000001)
     }
 }

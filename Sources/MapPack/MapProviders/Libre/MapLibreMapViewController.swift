@@ -19,7 +19,6 @@ final class MapLibreMapViewController: UIViewController {
     private let initialCamera: MapCamera?
     private let styleUrl: String?
     private let inset: MapEdgeInsets?
-    private let trackingMode: MLNUserTrackingMode?
     private let showsUserLocation: Bool
 
     private var mapView: MLNMapView?
@@ -31,7 +30,6 @@ final class MapLibreMapViewController: UIViewController {
         camera: MapCamera?,
         styleUrl: String?,
         inset: MapEdgeInsets?,
-        trackingMode: MLNUserTrackingMode?,
         showsUserLocation: Bool
     ) {
         self.viewModel = viewModel
@@ -39,7 +37,6 @@ final class MapLibreMapViewController: UIViewController {
         self.initialCamera = camera
         self.styleUrl = styleUrl
         self.inset = inset
-        self.trackingMode = trackingMode
         self.showsUserLocation = showsUserLocation
         super.init(nibName: nil, bundle: nil)
     }
@@ -68,8 +65,9 @@ final class MapLibreMapViewController: UIViewController {
         // apply tracking / user-location state once.
         viewModel.set(mapView: mapView)
 
-        if let trackingMode, mapView.userTrackingMode != trackingMode {
-            mapView.userTrackingMode = trackingMode
+        let requestedTrackingMode = viewModel.requestedUserTrackingMode.maplibre
+        if mapView.userTrackingMode != requestedTrackingMode {
+            mapView.userTrackingMode = requestedTrackingMode
         }
         if mapView.showsUserLocation != showsUserLocation {
             mapView.showsUserLocation = showsUserLocation
@@ -113,9 +111,7 @@ final class MapLibreMapViewController: UIViewController {
         guard showsUserLocation, let mapView else { return }
         mapView.showsUserLocation = false
         mapView.showsUserLocation = true
-        if let trackingMode {
-            mapView.userTrackingMode = trackingMode
-        }
+        mapView.userTrackingMode = viewModel.requestedUserTrackingMode.maplibre
     }
 
     deinit {

@@ -50,16 +50,7 @@ public struct MapPolyline: Identifiable {
     
     /// Calculate the total distance of the polyline in meters
     public var distance: CLLocationDistance {
-        guard coordinates.count > 1 else { return 0 }
-        
-        var totalDistance: CLLocationDistance = 0
-        for i in 0..<coordinates.count-1 {
-            let start = CLLocation(latitude: coordinates[i].latitude, longitude: coordinates[i].longitude)
-            let end = CLLocation(latitude: coordinates[i+1].latitude, longitude: coordinates[i+1].longitude)
-            totalDistance += start.distance(from: end)
-        }
-        
-        return totalDistance
+        coordinates.pathDistance
     }
     
     /// Get the bounding box of the polyline

@@ -11,6 +11,23 @@ import SwiftUI
 import MapLibre
 import CoreLocation
 
+public enum UserLocationtrackingMode {
+    case heading
+    case course
+    case none
+    
+    var maplibre: MLNUserTrackingMode {
+        switch self {
+        case .heading:
+            return .followWithHeading
+        case .course:
+            return .followWithCourse
+        case .none:
+            return .none
+        }
+    }
+}
+
 public struct MapLibreLightStyle: UniversalMapStyleProtocol {
     public var source: String {
         "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
@@ -27,12 +44,22 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?
     private var showsUserLocation: Bool = true
-    private var userTrackingMode: MLNUserTrackingMode?
+    private var requestedUserTrackingMode: UserLocationtrackingMode = .none
+    public var userTrackingMode: MLNUserTrackingMode? {
+        requestedUserTrackingMode.maplibre
+    }
     
     public var currentLocation: CLLocation? {
         self.viewModel.mapView?.userLocation?.location
     }
-    
+
+    /// Mirrors Google so the view model applies one rule for both providers: a custom
+    /// icon routes tracking through the custom camera follow; no icon uses native
+    /// `MLNUserTrackingMode`.
+    public var hasCustomUserLocationIcon: Bool {
+        viewModel.userLocationImage != nil
+    }
+
     public var markers: [String: any UniversalMapMarkerProtocol] {
         viewModel.markers
     }
@@ -70,7 +97,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         if camera.animate {
             mapView.setCamera(
                 targetCamera,
-                withDuration: 1, // Smooth animation duration
+                withDuration: camera.animationDuration ?? 1, // Default smooth animation duration
                 animationTimingFunction: CAMediaTimingFunction(name: .linear)
             ) {
                 Logging.l(tag: "MapLibre", "Camera animation completed")
@@ -79,7 +106,13 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
             mapView.camera = targetCamera
         }
     }
-    
+
+    /// Rotate the map to `bearing` (degrees clockwise from true north), leaving
+    /// the center, zoom, and pitch unchanged.
+    func setBearing(_ bearing: CLLocationDirection, animate: Bool) {
+        viewModel.mapView?.setDirection(bearing, animated: animate)
+    }
+
     @MainActor
     public func set(preferredRefreshRate: MapRefreshRate) {
         self.viewModel.set(preferredRefreshRate: preferredRefreshRate)
@@ -214,9 +247,9 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.viewModel.mapView?.maximumZoomLevel = max
     }
     
-    public func setUserTrackingMode(_ tracking: Bool) {
-        self.userTrackingMode = tracking ? .followWithHeading : nil
-        self.viewModel.mapView?.userTrackingMode = tracking ? .followWithHeading : .none
+    public func setUserTrackingMode(mode: UserLocationtrackingMode) {
+        requestedUserTrackingMode = mode
+        viewModel.setUserTrackingMode(mode)
     }
     
     public func showUserLocationAccuracy(_ show: Bool) {
@@ -278,7 +311,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
                 camera: mapCamera,
                 styleUrl: viewModel.config?.lightStyle,
                 inset: mapInsets,
-                trackingMode: userTrackingMode,
+                trackingMode: requestedUserTrackingMode.maplibre,
                 showsUserLocation: showsUserLocation
             )
         )
@@ -292,9 +325,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
             camera: mapCamera,
             styleUrl: viewModel.config?.lightStyle,
             inset: mapInsets,
-            trackingMode: userTrackingMode,
             showsUserLocation: showsUserLocation
         )
     }
 }
-
