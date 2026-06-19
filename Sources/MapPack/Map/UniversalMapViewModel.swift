@@ -492,12 +492,16 @@ public class UniversalMapViewModel: ObservableObject {
     /// Native path: hand the current-location follow to the provider's SDK tracking mode.
     @discardableResult
     private func applyNativeUserTracking(_ mode: UserLocationtrackingMode) -> Bool {
-        // The SDK now owns the current-location follow; release ours. A separate marker
-        // follow (`trackMarker`) is left running.
-        locationTrackingManager.stopCurrentLocationFollowIfActive()
-
         let isSupported = mode == .none || mapProviderInstance.capabilities.contains(.userTrackingMode)
         let appliedMode: UserLocationtrackingMode = isSupported ? mode : .none
+
+        // Only when native actually takes over the follow do we release our camera
+        // controller's current-location follow; a `.none` request (or an unsupported one)
+        // leaves any explicit `trackCurrentLocationOnMap`/`trackMarker` session running.
+        if appliedMode != .none {
+            locationTrackingManager.stopCurrentLocationFollowIfActive()
+        }
+
         uiState.userTrackingMode = appliedMode
         mapProviderInstance.setUserTrackingMode(mode: appliedMode)
         return isSupported
