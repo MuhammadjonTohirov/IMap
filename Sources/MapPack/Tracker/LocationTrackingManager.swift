@@ -301,11 +301,21 @@ extension LocationTrackingManager: LocationTrackingProtocol {
         if !isUserLocationDisplayActive {
             stopLocationUpdates()
         }
-        
+
         // Notify delegate
         delegate?.trackingDidStop()
     }
-    
+
+    /// Stop current-location following if it is active, leaving any marker follow running.
+    ///
+    /// Used when the SDK's native user-tracking takes over the current-location follow:
+    /// a separate `trackMarker` session must keep going.
+    public func stopCurrentLocationFollowIfActive() {
+        if case .currentLocation = trackingMode {
+            stopTracking()
+        }
+    }
+
     public func handleLocationUpdate(_ location: CLLocation) {
         self.currentLocation = location
         mapProvider?.updateUserLocation(location)

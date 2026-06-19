@@ -436,6 +436,9 @@ public class UniversalMapViewModel: ObservableObject {
     @MainActor
     public func set(userLocationIcon: UIImage?, scale: CGFloat = 1.0) {
         mapProviderInstance.setUserLocationIcon(userLocationIcon, scale: scale)
+        // Adding or clearing a custom icon flips the follow between custom and native,
+        // so re-apply the active tracking mode through the updated rule.
+        _ = applyUserTrackingMode(uiState.userTrackingMode)
     }
     
     @MainActor
@@ -472,13 +475,50 @@ public class UniversalMapViewModel: ObservableObject {
         }
     }
 
+    /// Apply a user-location tracking mode, picking the mechanism by whether a custom
+    /// current-location icon is set. Both providers go through this one rule:
+    ///
+    /// - **Custom icon** → follow with the in-house ``LocationTrackingManager``, because
+    ///   the SDK's native tracking can't follow a custom icon (Google draws it as a
+    ///   separate marker; for parity MapLibre uses the same path).
+    /// - **No icon** → use the provider's native tracking mode.
     @discardableResult
     private func applyUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool {
+        mapProviderInstance.hasCustomUserLocationIcon
+            ? applyCustomLocationFollow(mode)
+            : applyNativeUserTracking(mode)
+    }
+
+    /// Native path: hand the current-location follow to the provider's SDK tracking mode.
+    @discardableResult
+    private func applyNativeUserTracking(_ mode: UserLocationtrackingMode) -> Bool {
+        // The SDK now owns the current-location follow; release ours. A separate marker
+        // follow (`trackMarker`) is left running.
+        locationTrackingManager.stopCurrentLocationFollowIfActive()
+
         let isSupported = mode == .none || mapProviderInstance.capabilities.contains(.userTrackingMode)
         let appliedMode: UserLocationtrackingMode = isSupported ? mode : .none
         uiState.userTrackingMode = appliedMode
         mapProviderInstance.setUserTrackingMode(mode: appliedMode)
         return isSupported
+    }
+
+    /// Custom path: follow the current location with our own camera controller so the
+    /// custom icon is tracked. `heading`/`course` rotate the map to the travel direction
+    /// (course-up); `none` stops following. Native tracking is always disabled so the
+    /// two never fight over the camera.
+    @discardableResult
+    private func applyCustomLocationFollow(_ mode: UserLocationtrackingMode) -> Bool {
+        uiState.userTrackingMode = mode
+        mapProviderInstance.setUserTrackingMode(mode: .none)
+
+        switch mode {
+        case .none:
+            locationTrackingManager.stopCurrentLocationFollowIfActive()
+        case .heading, .course:
+            locationTrackingManager.trackCurrentLocationOnMap(mode: .courseUp)
+        }
+        return true
     }
 }
 

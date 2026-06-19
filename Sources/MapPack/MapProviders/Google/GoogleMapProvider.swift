@@ -112,7 +112,14 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     public var currentLocation: CLLocation? {
         lastKnownLocation ?? self.viewModel.mapView?.myLocation
     }
-    
+
+    /// A custom icon is drawn as a separate marker with `isMyLocationEnabled` off, so
+    /// only the custom camera controller can follow it — never Google's native tracking
+    /// (which is a stub here anyway).
+    public var hasCustomUserLocationIcon: Bool {
+        userLocationImage != nil
+    }
+
     public var markers: [String : any UniversalMapMarkerProtocol] {
         viewModel.allMarkers
     }
