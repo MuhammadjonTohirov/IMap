@@ -374,19 +374,38 @@ Shows or hides the user's location on the map.
 ### setUserTrackingMode(_:)
 
 ```swift
-public func setUserTrackingMode(_ tracking: Bool)
+@discardableResult
+public func setUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool
 ```
 
-Enables or disables user tracking mode (camera follows user).
+Makes the camera follow the user's location. `mode` is `.heading`, `.course`, or
+`.none`. Returns whether the requested mode was applied.
+
+The follow **mechanism is chosen automatically by whether a custom location icon is set**
+(via `set(userLocationIcon:scale:)`), and both providers (Google and MapLibre) obey the
+same rule:
+
+- **Custom icon set** → the camera is driven by the in-house `LocationTrackingManager`
+  follow. The SDK's native tracking can't follow a custom icon (Google renders it as a
+  separate marker), so `.heading`/`.course` rotate the map to the travel direction
+  (course-up) and `.none` stops following.
+- **No custom icon** → the provider's native tracking mode is used (MapLibre's
+  `MLNUserTrackingMode`; Google's native follow is not implemented, so the call is a
+  no-op and returns `false`).
+
+Switching the icon on or off automatically re-applies the active mode, so call order
+doesn't matter. Any independent `trackMarker(...)` follow is left untouched.
 
 ### set(userLocationIcon:scale:)
 
 ```swift
 @MainActor
-public func set(userLocationIcon: UIImage, scale: CGFloat = 1.0)
+public func set(userLocationIcon: UIImage?, scale: CGFloat = 1.0)
 ```
 
-Sets a custom icon for the user's location.
+Sets (or clears, when `nil`) a custom icon for the user's location. Setting an icon also
+switches user tracking to the custom camera follow described above; clearing it returns
+to native tracking.
 
 **Example:**
 
