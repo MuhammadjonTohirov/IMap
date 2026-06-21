@@ -11,7 +11,7 @@ import SwiftUI
 import MapLibre
 import CoreLocation
 
-public enum UserLocationtrackingMode {
+public enum UserLocationtrackingMode: Sendable {
     case heading
     case course
     case none
@@ -109,6 +109,11 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     @MainActor
     public func set(preferredRefreshRate: MapRefreshRate) {
         self.viewModel.set(preferredRefreshRate: preferredRefreshRate)
+    }
+
+    @MainActor
+    public func setTintColor(_ color: UIColor) {
+        viewModel.setTintColor(color)
     }
     
     public func setUserLocationIcon(_ image: UIImage?, scale: CGFloat) {

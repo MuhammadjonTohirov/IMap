@@ -103,6 +103,10 @@ public protocol MapStylable: AnyObject {
     
     /// Set the map style
     func setMapStyle(_ style: (any UniversalMapStyleProtocol)?, scheme: ColorScheme)
+
+    /// Set the native map view tint color.
+    @MainActor
+    func setTintColor(_ color: UIColor)
     
     func showBuildings(_ show: Bool)
     

@@ -148,6 +148,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
 
         self.showUserLocation(self.shouldShowUserLocation)
     }
+
+    @MainActor
+    public func setTintColor(_ color: UIColor) {
+        viewModel.setTintColor(color)
+    }
     
     public func updateUserLocation(_ location: CLLocation) {
         self.lastKnownLocation = location

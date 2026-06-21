@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 import CoreLocation
 import Combine
+import UIKit
 
 @MainActor
 public protocol UniversalMapViewModelDelegate: AnyObject {
@@ -33,7 +34,7 @@ public extension UniversalMapViewModelDelegate {
     func mapDidRotate(map: MapProviderProtocol, location: CLLocationCoordinate2D) {}
 }
 
-public struct AddressInfo {
+public struct AddressInfo: Sendable {
     public var name: String?
     public var location: CLLocationCoordinate2D?
     
@@ -107,6 +108,7 @@ public class UniversalMapViewModel: ObservableObject {
     public private(set) var mapProviderInstance: MapProviderProtocol
     
     private var markersById: [String: any UniversalMapMarkerProtocol] = [:]
+    private var tintColor: UIColor?
     
     var polylines: [UniversalMapPolyline] {
         Array(polylinesById.values)
@@ -237,10 +239,25 @@ public class UniversalMapViewModel: ObservableObject {
         // Keep the cached camera's bearing coherent for internal observers.
         camera?.bearing = bearing
     }
+
+    /// Set the map direction in degrees clockwise from true north.
+    ///
+    /// This is a MapLibre-friendly name for ``setBearing(_:animate:)``; both map
+    /// providers use the same normalized world heading.
+    public func setDirection(_ direction: CLLocationDirection, animated: Bool = true) {
+        setBearing(direction, animate: animated)
+    }
     
     /// Set the map style
     public func setMapStyle(_ style: any UniversalMapStyleProtocol, scheme: ColorScheme) {
         mapProviderInstance.setMapStyle(style, scheme: scheme)
+    }
+
+    /// Set the native map view tint color.
+    @MainActor
+    public func setTintColor(_ color: UIColor) {
+        tintColor = color
+        mapProviderInstance.setTintColor(color)
     }
     
     /// Show or hide the user's location
@@ -385,7 +402,10 @@ public class UniversalMapViewModel: ObservableObject {
     
     @MainActor
     public func focusToCurrentLocation(animated: Bool = true) {
-        guard let location = self.mapProviderInstance.currentLocation else { return }
+        guard let location = self.mapProviderInstance.currentLocation else {
+            Logging.l(tag: "UniversalMapViewModel", "Unable to get current location")
+            return
+        }
         
         self.mapProviderInstance.focusMap(
             on: location.coordinate,
@@ -460,6 +480,9 @@ public class UniversalMapViewModel: ObservableObject {
         mapProviderInstance.showUserLocation(uiState.showUserLocation)
         _ = applyUserTrackingMode(uiState.userTrackingMode)
         mapProviderInstance.setEdgeInsets(uiState.edgeInsets)
+        if let tintColor {
+            mapProviderInstance.setTintColor(tintColor)
+        }
         
         // Re-add all markers
         for marker in markersById.values {

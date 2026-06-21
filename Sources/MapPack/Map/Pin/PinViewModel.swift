@@ -36,7 +36,7 @@ public enum PinState: Hashable, Equatable, Identifiable {
 }
 
 
-public class PinViewModel: ObservableObject {
+public class PinViewModel: ObservableObject, @unchecked Sendable {
     @Published public var state: PinState = .initial
     
     public init() {
