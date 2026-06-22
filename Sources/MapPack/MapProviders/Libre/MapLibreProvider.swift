@@ -52,7 +52,14 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     public var currentLocation: CLLocation? {
         self.viewModel.mapView?.userLocation?.location
     }
-    
+
+    /// Mirrors Google so the view model applies one rule for both providers: a custom
+    /// icon routes tracking through the custom camera follow; no icon uses native
+    /// `MLNUserTrackingMode`.
+    public var hasCustomUserLocationIcon: Bool {
+        viewModel.userLocationImage != nil
+    }
+
     public var markers: [String: any UniversalMapMarkerProtocol] {
         viewModel.markers
     }

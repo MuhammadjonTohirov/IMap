@@ -475,6 +475,9 @@ public class UniversalMapViewModel: ObservableObject {
     @MainActor
     public func set(userLocationIcon: UIImage?, scale: CGFloat = 1.0) {
         mapProviderInstance.setUserLocationIcon(userLocationIcon, scale: scale)
+        // Adding or clearing a custom icon flips the follow between custom and native,
+        // so re-apply the active tracking mode through the updated rule.
+        _ = applyUserTrackingMode(uiState.userTrackingMode, reason: .programmatic)
     }
     
     @MainActor
@@ -518,6 +521,13 @@ public class UniversalMapViewModel: ObservableObject {
         }
     }
 
+    /// Apply a user-location tracking mode, picking the mechanism by whether a custom
+    /// current-location icon is set. Both providers go through this one rule:
+    ///
+    /// - **Custom icon** → follow with the in-house ``LocationTrackingManager``, because
+    ///   the SDK's native tracking can't follow a custom icon (Google draws it as a
+    ///   separate marker; for parity MapLibre uses the same path).
+    /// - **No icon** → use the provider's native tracking mode.
     @discardableResult
     private func applyUserTrackingMode(
         _ mode: UserLocationtrackingMode,

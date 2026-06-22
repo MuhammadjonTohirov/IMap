@@ -392,10 +392,12 @@ User pan, pinch, zoom, rotate, or tilt gestures set the tracking mode back to `.
 
 ```swift
 @MainActor
-public func set(userLocationIcon: UIImage, scale: CGFloat = 1.0)
+public func set(userLocationIcon: UIImage?, scale: CGFloat = 1.0)
 ```
 
-Sets a custom icon for the user's location.
+Sets (or clears, when `nil`) a custom icon for the user's location. Setting an icon also
+switches user tracking to the custom camera follow described above; clearing it returns
+to native tracking.
 
 **Example:**
 

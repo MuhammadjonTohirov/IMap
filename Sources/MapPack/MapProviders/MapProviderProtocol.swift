@@ -82,7 +82,16 @@ public protocol MapPolylineManageable: AnyObject {
 /// Protocol for managing user location display and tracking
 public protocol MapUserLocationDisplayable: AnyObject {
     var currentLocation: CLLocation? { get }
-    
+
+    /// Whether a custom current-location icon is currently set on this provider.
+    ///
+    /// Drives how `UniversalMapViewModel` applies a user-tracking mode: when `true`, the
+    /// SDK's native tracking can't follow the icon (Google renders it as a separate
+    /// marker), so the camera is driven by the in-house `LocationTrackingManager`
+    /// follow instead of `setUserTrackingMode(mode:)`. Declared as a protocol
+    /// requirement so it dispatches to each provider rather than the default below.
+    var hasCustomUserLocationIcon: Bool { get }
+
     /// Show or hide the user's location
     func showUserLocation(_ show: Bool)
     
@@ -196,6 +205,10 @@ public extension MapProviderProtocol {
 }
 
 public extension MapUserLocationDisplayable {
+    /// Providers without a custom-icon concept report `false`, so the view model always
+    /// falls back to native tracking for them.
+    var hasCustomUserLocationIcon: Bool { false }
+
     func setUserLocationIcon(_ image: UIImage?, scale: CGFloat) {}
 
     func updateUserLocation(_ location: CLLocation) {}
