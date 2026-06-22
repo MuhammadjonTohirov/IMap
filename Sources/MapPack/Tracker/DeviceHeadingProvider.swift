@@ -58,13 +58,13 @@ public final class DeviceHeadingProvider: NSObject, ObservableObject, DeviceHead
             return
         }
 
+        isUpdatingHeading = true
+        locationManager.startUpdatingHeading()
+        
         if automaticallyUpdatesHeadingOrientation {
             startObservingDeviceOrientation()
             updateDeviceOrientation(UIDevice.current.orientation)
         }
-
-        isUpdatingHeading = true
-        locationManager.startUpdatingHeading()
     }
 
     public func stopUpdatingHeading() {

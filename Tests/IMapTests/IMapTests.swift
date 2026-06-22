@@ -2,6 +2,7 @@ import XCTest
 import CoreLocation
 import SwiftUI
 import UIKit
+import MapLibre
 @testable import MapPack
 
 final class IMapTests: XCTestCase {
@@ -58,6 +59,60 @@ final class IMapTests: XCTestCase {
         viewModel.setDirection(135, animated: false)
 
         XCTAssertEqual(viewModel.camera?.bearing, 135)
+    }
+
+    @MainActor
+    func testUniversalMapViewModelReadsMapLibreZoomLevelDirectly() throws {
+        let provider = MapLibreProvider()
+        let mapView = MLNMapView(
+            frame: CGRect(x: 0, y: 0, width: 390, height: 844),
+            styleURL: nil
+        )
+        provider.viewModel.set(mapView: mapView)
+        let viewModel = UniversalMapViewModel(
+            instance: provider,
+            providerType: .mapLibre,
+            config: MapConfig(config: TestUniversalMapConfig()),
+            deviceHeadingProvider: FakeDeviceHeadingProvider(),
+            locationTrackingManager: LocationTrackingManager(locationManager: CoreLocationManagerSpy())
+        )
+        mapView.zoomLevel = 15.75
+
+        let camera = try XCTUnwrap(viewModel.getCamera(animate: false))
+
+        XCTAssertEqual(camera.zoom, 15.75, accuracy: 0.0001)
+        XCTAssertFalse(camera.animate)
+    }
+
+    @MainActor
+    func testMapLibreUpdateCameraPreservesRequestedZoom() throws {
+        let provider = MapLibreProvider()
+        let mapView = MLNMapView(
+            frame: CGRect(x: 0, y: 0, width: 390, height: 844),
+            styleURL: nil
+        )
+        provider.viewModel.set(mapView: mapView)
+        let viewModel = UniversalMapViewModel(
+            instance: provider,
+            providerType: .mapLibre,
+            config: MapConfig(config: TestUniversalMapConfig()),
+            deviceHeadingProvider: FakeDeviceHeadingProvider(),
+            locationTrackingManager: LocationTrackingManager(locationManager: CoreLocationManagerSpy())
+        )
+
+        viewModel.updateCamera(
+            to: UniversalMapCamera(
+                center: CLLocationCoordinate2D(latitude: 41.31, longitude: 69.28),
+                zoom: 16.25,
+                bearing: 70,
+                pitch: 25,
+                animate: false
+            )
+        )
+
+        let camera = try XCTUnwrap(viewModel.getCamera(animate: false))
+        XCTAssertEqual(camera.zoom, 16.25, accuracy: 0.0001)
+        XCTAssertEqual(camera.pitch, 25, accuracy: 0.0001)
     }
 
     @MainActor

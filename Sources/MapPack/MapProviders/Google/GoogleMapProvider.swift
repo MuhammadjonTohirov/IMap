@@ -226,12 +226,12 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         let current = mapView.camera
         let rotated = GMSCameraPosition(
             target: current.target,
-            zoom: current.zoom,
+            zoom: 16,
             bearing: bearing,
             viewingAngle: current.viewingAngle
         )
         if animate {
-            mapView.animate(to: rotated)
+            mapView.animate(toBearing: bearing)
         } else {
             mapView.camera = rotated
         }

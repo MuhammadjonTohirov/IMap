@@ -384,6 +384,8 @@ Sets MapPack-owned user tracking behavior for both Google Maps and MapLibre.
 - `.heading`: follows the current location without rotating the map.
 - `.course`: follows the current location and rotates the map using `CLLocation.course` when it is valid; otherwise it falls back to the device compass heading.
 
+When entering any non-`.none` mode the map first recenters on the current location (equivalent to `focusToCurrentLocation()`) so tracking begins centered on the user. If the current location is not yet available the recenter is skipped.
+
 User pan, pinch, zoom, rotate, or tilt gestures set the tracking mode back to `.none` and notify `UniversalMapViewModelDelegate`.
 
 ### set(userLocationIcon:scale:)

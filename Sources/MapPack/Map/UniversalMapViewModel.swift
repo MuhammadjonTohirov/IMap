@@ -223,8 +223,8 @@ public class UniversalMapViewModel: ObservableObject {
                 let cam = mapView.camera
                 return .init(
                     center: cam.centerCoordinate,
-                    zoom: mapView.zoom(forAltitude: cam.altitude),
-                    bearing: cam.heading,
+                    zoom: mapView.zoomLevel,
+                    bearing: mapView.direction,
                     pitch: cam.pitch,
                     animate: animate
                 )
@@ -526,6 +526,14 @@ public class UniversalMapViewModel: ObservableObject {
     ) -> Bool {
         let previousMode = uiState.userTrackingMode
         uiState.userTrackingMode = mode
+
+        // Entering a tracking mode: snap to the user first so tracking starts centered on them.
+        // The recenter is intentionally non-animated — tracking is enabled immediately below, and
+        // an animated focus would be interrupted mid-flight by the first follow update, leaving the
+        // user off-center.
+        if mode != .none {
+            focusToCurrentLocation(animated: false)
+        }
 
         // MapPack owns user tracking behavior so Google and MapLibre behave the same.
         mapProviderInstance.setUserTrackingMode(mode: .none)
