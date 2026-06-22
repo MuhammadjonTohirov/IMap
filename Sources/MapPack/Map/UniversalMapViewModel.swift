@@ -128,11 +128,9 @@ public class UniversalMapViewModel: ObservableObject {
         
         // Setup Managers
         self.locationTrackingManager.setMapProvider(instance)
-        self.locationTrackingManager.setDefaultZoomLevel(defaultZoomLevel)
 
         // Set up delegation
         self.mapProviderInstance.setInteractionDelegate(self)
-        self.locationTrackingManager.setDelegate(self)
         
         // Initialize the map provider with initial configuration
         self.updateMapProviderConfiguration()
@@ -285,7 +283,6 @@ public class UniversalMapViewModel: ObservableObject {
     public func addMarker(_ marker: any UniversalMapMarkerProtocol) -> String {
         markersById[marker.id] = marker
         mapProviderInstance.addMarker(marker)
-        locationTrackingManager.handleMarkerUpdate(marker)
         return marker.id
     }
     
@@ -302,7 +299,6 @@ public class UniversalMapViewModel: ObservableObject {
         } else {
             mapProviderInstance.addMarker(marker)
         }
-        locationTrackingManager.handleMarkerUpdate(marker)
     }
     
     /// Remove a marker from the map
@@ -505,21 +501,6 @@ public class UniversalMapViewModel: ObservableObject {
     }
 }
 
-// MARK: - LocationTrackingDelegate Implementation
-extension UniversalMapViewModel: LocationTrackingDelegate {
-    public func trackingDidStart(mode: MapTrackingMode) {
-        objectWillChange.send()
-    }
-    
-    public func trackingDidStop() {
-        objectWillChange.send()
-    }
-    
-    public func trackingDidFail(error: Error) {
-        objectWillChange.send()
-    }
-}
-
 // MARK: - MapInteractionDelegate Implementation
 extension UniversalMapViewModel: MapInteractionDelegate {
     public func mapDidStartDragging() {
@@ -550,95 +531,5 @@ extension UniversalMapViewModel: MapInteractionDelegate {
     
     public func mapDidRotate(to coordinate: CLLocationCoordinate2D) {
         self.delegate?.mapDidRotate(map: self.mapProviderInstance, location: coordinate)
-    }
-}
-
-// MARK: - Location Tracking Methods (Restored)
-public extension UniversalMapViewModel {
-    
-    /// Current tracking mode
-    var trackingMode: MapTrackingMode {
-        locationTrackingManager.trackingMode
-    }
-    
-    /// Whether location tracking is active
-    var isLocationTrackingActive: Bool {
-        locationTrackingManager.isTrackingActive
-    }
-    
-    /// Current tracked location
-    var trackedLocation: CLLocation? {
-        locationTrackingManager.currentLocation
-    }
-    
-    /// Start tracking current location with camera following
-    /// - Parameter zoom: Optional zoom level (uses default if nil)
-    @MainActor
-    func trackCurrentLocationOnMap(
-        zoom: Double? = nil,
-        mode: CameraFollowMode = .northUp,
-        pitch: Double = 0,
-        followAnimationDuration: TimeInterval? = nil
-    ) {
-        locationTrackingManager.trackCurrentLocationOnMap(
-            zoom: zoom,
-            mode: mode,
-            pitch: pitch,
-            followAnimationDuration: followAnimationDuration
-        )
-    }
-    
-    /// Start tracking a specific marker with camera following
-    /// - Parameters:
-    ///   - markerId: ID of the marker to track
-    ///   - zoom: Optional zoom level (uses default if nil)
-    ///   - mode: Camera orientation while following (north-up or course-up)
-    ///   - pitch: Camera pitch in degrees (0 = looking straight down)
-    ///   - followAnimationDuration: Duration used when the follow camera animates
-    ///     (north-up moves). Course-up follows the heading instantly.
-    func trackMarker(
-        _ markerId: String,
-        zoom: Double? = nil,
-        mode: CameraFollowMode = .northUp,
-        pitch: Double = 0,
-        followAnimationDuration: TimeInterval? = nil
-    ) {
-        locationTrackingManager.trackMarker(
-            markerId,
-            zoom: zoom,
-            mode: mode,
-            pitch: pitch,
-            followAnimationDuration: followAnimationDuration
-        )
-    }
-    
-    /// Stop all location and marker tracking
-    func stopTrackCurrentLocationOnMap() {
-        locationTrackingManager.stopTracking()
-    }
-   
-    @available(*, deprecated, renamed: "stopTrackCurrentLocationOnMap")
-    func stopTracking() {
-        locationTrackingManager.stopTracking()
-    }
-    
-    /// Enhanced addMarker that notifies tracking manager
-    @discardableResult
-    func addMarkerWithTracking(_ marker: any UniversalMapMarkerProtocol) -> String {
-        let markerId = addMarker(marker)
-        // Note: addMarker already calls handleMarkerUpdate in the new implementation,
-        // but explicit call here is safe (idempotent usually)
-        return markerId
-    }
-    
-    /// Enhanced marker update for active tracking scenarios.
-    func updateTrackedMarker(_ marker: any UniversalMapMarkerProtocol) {
-        updateMarker(marker)
-    }
-    
-    /// Enhanced setMapProvider that updates tracking
-    func setMapProviderWithTracking(_ provider: MapProvider, input: any MapConfigProtocol) {
-        setMapProvider(provider, config: input)
-        // Managers are already updated in setMapProvider
     }
 }
