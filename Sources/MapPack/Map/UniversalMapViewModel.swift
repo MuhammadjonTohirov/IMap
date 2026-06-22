@@ -21,6 +21,11 @@ public protocol UniversalMapViewModelDelegate: AnyObject {
     func mapDidTap(map: MapProviderProtocol, at coordinate: CLLocationCoordinate2D)
     func mapDidLoaded(map: MapProviderProtocol)
     func mapDidRotate(map: MapProviderProtocol, location: CLLocationCoordinate2D)
+    func mapDidChangeUserTrackingMode(
+        map: MapProviderProtocol,
+        mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason
+    )
 }
 
 // Default implementation
@@ -32,6 +37,11 @@ public extension UniversalMapViewModelDelegate {
     func mapDidTap(map: MapProviderProtocol, at coordinate: CLLocationCoordinate2D) {}
     func mapDidLoaded(map: MapProviderProtocol) {}
     func mapDidRotate(map: MapProviderProtocol, location: CLLocationCoordinate2D) {}
+    func mapDidChangeUserTrackingMode(
+        map: MapProviderProtocol,
+        mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason
+    ) {}
 }
 
 public struct AddressInfo: Sendable {
@@ -49,7 +59,8 @@ public struct AddressInfo: Sendable {
 public class UniversalMapViewModel: ObservableObject {
     // MARK: - Components
     @Published public var uiState = MapUIState()
-    public let locationTrackingManager = LocationTrackingManager()
+    public let locationTrackingManager: LocationTrackingManager
+    private let deviceHeadingProvider: any DeviceHeadingProviding
 
     // MARK: - Published Properties (Backward Compatibility / Facade)
     @Published public var mapProvider: MapProvider
@@ -67,7 +78,7 @@ public class UniversalMapViewModel: ObservableObject {
     public var userTrackingMode: UserLocationtrackingMode {
         get { uiState.userTrackingMode }
         set {
-            _ = applyUserTrackingMode(newValue)
+            _ = applyUserTrackingMode(newValue, reason: .programmatic)
         }
     }
     
@@ -109,6 +120,8 @@ public class UniversalMapViewModel: ObservableObject {
     
     private var markersById: [String: any UniversalMapMarkerProtocol] = [:]
     private var tintColor: UIColor?
+    private var cancellables = Set<AnyCancellable>()
+    var latestDeviceHeading: DeviceHeading?
     
     var polylines: [UniversalMapPolyline] {
         Array(polylinesById.values)
@@ -119,15 +132,25 @@ public class UniversalMapViewModel: ObservableObject {
     // MARK: - Initialization
     
     /// Initialize with a specific map provider instance (Dependency Injection)
-    public init(instance: MapProviderProtocol, providerType: MapProvider, config: any MapConfigProtocol) {
+    public init(
+        instance: MapProviderProtocol,
+        providerType: MapProvider,
+        config: any MapConfigProtocol,
+        deviceHeadingProvider: (any DeviceHeadingProviding)? = nil,
+        locationTrackingManager: LocationTrackingManager? = nil
+    ) {
         self.mapProvider = providerType
         self.mapProviderInstance = instance
         self.config = config
+        self.deviceHeadingProvider = deviceHeadingProvider ?? DeviceHeadingProvider()
+        self.locationTrackingManager = locationTrackingManager ?? LocationTrackingManager()
         
         self.set(config: config)
         
         // Setup Managers
         self.locationTrackingManager.setMapProvider(instance)
+        self.deviceHeadingProvider.delegate = self
+        self.observeLocationUpdates()
 
         // Set up delegation
         self.mapProviderInstance.setInteractionDelegate(self)
@@ -270,7 +293,7 @@ public class UniversalMapViewModel: ObservableObject {
     /// Enable or disable user tracking mode
     @discardableResult
     public func setUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool {
-        applyUserTrackingMode(mode)
+        applyUserTrackingMode(mode, reason: .programmatic)
     }
     
     /// Set the map edge insets
@@ -474,7 +497,11 @@ public class UniversalMapViewModel: ObservableObject {
         }
         
         mapProviderInstance.showUserLocation(uiState.showUserLocation)
-        _ = applyUserTrackingMode(uiState.userTrackingMode)
+        _ = applyUserTrackingMode(
+            uiState.userTrackingMode,
+            reason: .programmatic,
+            notifyDelegate: false
+        )
         mapProviderInstance.setEdgeInsets(uiState.edgeInsets)
         if let tintColor {
             mapProviderInstance.setTintColor(tintColor)
@@ -492,44 +519,89 @@ public class UniversalMapViewModel: ObservableObject {
     }
 
     @discardableResult
-    private func applyUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool {
-        let isSupported = mode == .none || mapProviderInstance.capabilities.contains(.userTrackingMode)
-        let appliedMode: UserLocationtrackingMode = isSupported ? mode : .none
-        uiState.userTrackingMode = appliedMode
-        mapProviderInstance.setUserTrackingMode(mode: appliedMode)
-        return isSupported
-    }
-}
+    private func applyUserTrackingMode(
+        _ mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason,
+        notifyDelegate: Bool = true
+    ) -> Bool {
+        let previousMode = uiState.userTrackingMode
+        uiState.userTrackingMode = mode
 
-// MARK: - MapInteractionDelegate Implementation
-extension UniversalMapViewModel: MapInteractionDelegate {
-    public func mapDidStartDragging() {
-        self.addressInfo = nil
-        self.delegate?.mapDidStartDragging(map: self.mapProviderInstance)
+        // MapPack owns user tracking behavior so Google and MapLibre behave the same.
+        mapProviderInstance.setUserTrackingMode(mode: .none)
+        locationTrackingManager.setTrackingLocationUpdatesEnabled(mode != .none)
+
+        if mode == .course {
+            if !deviceHeadingProvider.isUpdatingHeading {
+                deviceHeadingProvider.startUpdatingHeading()
+            }
+        } else {
+            deviceHeadingProvider.stopUpdatingHeading()
+        }
+
+        if mode == .none {
+            latestDeviceHeading = nil
+        }
+
+        if notifyDelegate, previousMode != mode {
+            delegate?.mapDidChangeUserTrackingMode(
+                map: mapProviderInstance,
+                mode: mode,
+                reason: reason
+            )
+        }
+
+        return true
     }
-    
-    public func mapDidStartMoving() {
-        self.addressInfo = nil
-        self.delegate?.mapDidStartMoving(map: self.mapProviderInstance)
+
+    private func observeLocationUpdates() {
+        locationTrackingManager.$currentLocation
+            .compactMap { $0 }
+            .sink { [weak self] location in
+                Task { @MainActor in
+                    self?.handleTrackedLocationUpdate(location)
+                }
+            }
+            .store(in: &cancellables)
     }
-    
-    public func mapDidEndDragging(at location: CLLocation) {
-        self.delegate?.mapDidEndDragging(map: self.mapProviderInstance, at: location)
+
+    private func handleTrackedLocationUpdate(_ location: CLLocation) {
+        switch uiState.userTrackingMode {
+        case .none:
+            return
+        case .heading:
+            followCurrentLocation(location)
+        case .course:
+            if let direction = courseTrackingDirection(for: location) {
+                setDirection(direction, animated: true)
+            }
+            followCurrentLocation(location)
+        }
     }
-    
-    public func mapDidTapMarker(id: String) -> Bool {
-        self.delegate?.mapDidTapMarker(map: self.mapProviderInstance, id: id) ?? false
+
+    private func followCurrentLocation(_ location: CLLocation) {
+        let activeCamera = getCamera(animate: true) ?? camera
+        let followCamera = UniversalMapCamera(
+            center: location.coordinate,
+            zoom: activeCamera?.zoom ?? defaultZoomLevel,
+            bearing: activeCamera?.bearing ?? camera?.bearing ?? 0,
+            pitch: activeCamera?.pitch ?? camera?.pitch ?? 0,
+            animate: true,
+            animationDuration: activeCamera?.animationDuration
+        )
+        updateCamera(to: followCamera)
     }
-    
-    public func mapDidTap(at coordinate: CLLocationCoordinate2D) {
-        self.delegate?.mapDidTap(map: self.mapProviderInstance, at: coordinate)
+
+    private func courseTrackingDirection(for location: CLLocation) -> CLLocationDirection? {
+        if location.course >= 0 {
+            return location.course
+        }
+
+        return latestDeviceHeading?.degrees ?? deviceHeadingProvider.currentHeading?.degrees
     }
-    
-    public func mapDidLoaded() {
-        self.delegate?.mapDidLoaded(map: self.mapProviderInstance)
-    }
-    
-    public func mapDidRotate(to coordinate: CLLocationCoordinate2D) {
-        self.delegate?.mapDidRotate(map: self.mapProviderInstance, location: coordinate)
+
+    func cancelUserTrackingForInteraction() {
+        guard uiState.userTrackingMode != .none else { return }
+        _ = applyUserTrackingMode(.none, reason: .userInteraction)
     }
 }

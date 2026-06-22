@@ -12,7 +12,7 @@ public final class LocationTrackingManager: NSObject, ObservableObject {
     @Published public private(set) var lastError: LocationTrackingError?
     
     // MARK: - Private Properties
-    private let locationManager = CLLocationManager()
+    private let locationManager: any CoreLocationManaging
     private(set) weak var mapProvider: MapProviderProtocol?
 
     // MARK: - Location Update Throttling
@@ -24,9 +24,18 @@ public final class LocationTrackingManager: NSObject, ObservableObject {
     private let locationUpdateDistanceThreshold: CLLocationDistance = 5
 
     private var isUserLocationDisplayActive: Bool = false
+    private var isTrackingLocationUpdatesActive: Bool = false
+    private var needsLocationUpdates: Bool {
+        isUserLocationDisplayActive || isTrackingLocationUpdatesActive
+    }
 
     // MARK: - Initialization
-    public override init() {
+    public convenience override init() {
+        self.init(locationManager: CLLocationManager())
+    }
+
+    init(locationManager: any CoreLocationManaging) {
+        self.locationManager = locationManager
         super.init()
         setupLocationManager()
     }
@@ -40,15 +49,23 @@ public final class LocationTrackingManager: NSObject, ObservableObject {
 
     public func setUserLocationDisplayEnabled(_ enabled: Bool) {
         isUserLocationDisplayActive = enabled
+        updateLocationUpdatesState()
+    }
 
-        if enabled {
+    public func setTrackingLocationUpdatesEnabled(_ enabled: Bool) {
+        isTrackingLocationUpdatesActive = enabled
+        updateLocationUpdatesState()
+    }
+    
+    // MARK: - Private Methods
+
+    private func updateLocationUpdatesState() {
+        if needsLocationUpdates {
             startLocationUpdates()
         } else {
             stopLocationUpdates()
         }
     }
-    
-    // MARK: - Private Methods
     
     private func setupLocationManager() {
         locationManager.delegate = self
@@ -79,7 +96,7 @@ public final class LocationTrackingManager: NSObject, ObservableObject {
         case .authorizedWhenInUse, .authorizedAlways:
             Logging.l(tag: "LocationTracking", "Location authorized, checking if tracking should start...")
             lastError = nil
-            if isUserLocationDisplayActive {
+            if needsLocationUpdates {
                 Logging.l(tag: "LocationTracking", "Restarting location updates after authorization")
                 locationManager.startUpdatingLocation()
             }

@@ -37,9 +37,9 @@ The current camera position and configuration.
 Whether to show the user's location on the map. Default: `true`.
 
 ```swift
-@Published public var userTrackingMode: Bool
+@Published public var userTrackingMode: UserLocationtrackingMode
 ```
-Whether to follow the user's location. Default: `false`.
+Controls whether MapPack follows the user's location. Default: `.none`.
 
 ```swift
 @Published public var edgeInsets: UniversalMapEdgeInsets
@@ -374,10 +374,17 @@ Shows or hides the user's location on the map.
 ### setUserTrackingMode(_:)
 
 ```swift
-public func setUserTrackingMode(_ tracking: Bool)
+@discardableResult
+public func setUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool
 ```
 
-Enables or disables user tracking mode (camera follows user).
+Sets MapPack-owned user tracking behavior for both Google Maps and MapLibre.
+
+- `.none`: stops following location and stops direction updates.
+- `.heading`: follows the current location without rotating the map.
+- `.course`: follows the current location and rotates the map using `CLLocation.course` when it is valid; otherwise it falls back to the device compass heading.
+
+User pan, pinch, zoom, rotate, or tilt gestures set the tracking mode back to `.none` and notify `UniversalMapViewModelDelegate`.
 
 ### set(userLocationIcon:scale:)
 
@@ -516,6 +523,14 @@ class MyMapController: UniversalMapViewModelDelegate {
     
     func mapDidEndDragging(map: MapProviderProtocol, at location: CLLocation) {
         print("Map dragged to: \(location.coordinate)")
+    }
+
+    func mapDidChangeUserTrackingMode(
+        map: MapProviderProtocol,
+        mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason
+    ) {
+        print("Tracking mode changed to \(mode), reason: \(reason)")
     }
 }
 

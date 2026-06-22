@@ -59,6 +59,142 @@ final class IMapTests: XCTestCase {
 
         XCTAssertEqual(viewModel.camera?.bearing, 135)
     }
+
+    @MainActor
+    func testUserTrackingModeIsOwnedByUniversalMapViewModelForBothProviders() {
+        for providerType in [MapProvider.google, .mapLibre] {
+            let provider = TintRecordingMapProvider()
+            provider.capabilities = [.userTrackingMode]
+            let coreLocationManager = CoreLocationManagerSpy()
+            let headingProvider = FakeDeviceHeadingProvider()
+            let viewModel = UniversalMapViewModel(
+                instance: provider,
+                providerType: providerType,
+                config: MapConfig(config: TestUniversalMapConfig()),
+                deviceHeadingProvider: headingProvider,
+                locationTrackingManager: LocationTrackingManager(locationManager: coreLocationManager)
+            )
+
+            XCTAssertTrue(viewModel.setUserTrackingMode(.course))
+
+            XCTAssertEqual(viewModel.userTrackingMode, .course)
+            XCTAssertEqual(provider.nativeTrackingModes.last, UserLocationtrackingMode.none)
+            XCTAssertEqual(coreLocationManager.startUpdatingLocationCount, 1)
+            XCTAssertTrue(headingProvider.isUpdatingHeading)
+        }
+    }
+
+    @MainActor
+    func testCourseTrackingUsesLocationCourseBeforeCompassHeading() async throws {
+        let provider = TintRecordingMapProvider()
+        let headingProvider = FakeDeviceHeadingProvider()
+        let viewModel = UniversalMapViewModel(
+            instance: provider,
+            providerType: .google,
+            config: MapConfig(config: TestUniversalMapConfig()),
+            deviceHeadingProvider: headingProvider,
+            locationTrackingManager: LocationTrackingManager(locationManager: CoreLocationManagerSpy())
+        )
+        viewModel.updateCamera(to: UniversalMapCamera(center: .init(latitude: 0, longitude: 0), zoom: 14, bearing: 10))
+        headingProvider.sendHeading(270)
+
+        XCTAssertTrue(viewModel.setUserTrackingMode(.course))
+        viewModel.locationTrackingManager.currentLocation = trackedLocation(
+            latitude: 41,
+            longitude: 69,
+            course: 90
+        )
+        await Task.yield()
+
+        let camera = try XCTUnwrap(viewModel.camera)
+        XCTAssertEqual(camera.bearing, 90)
+        XCTAssertEqual(camera.center.latitude, 41, accuracy: 0.0001)
+        XCTAssertEqual(camera.center.longitude, 69, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testCourseTrackingFallsBackToCompassWhenLocationCourseIsInvalid() async throws {
+        let provider = TintRecordingMapProvider()
+        let headingProvider = FakeDeviceHeadingProvider()
+        let viewModel = UniversalMapViewModel(
+            instance: provider,
+            providerType: .google,
+            config: MapConfig(config: TestUniversalMapConfig()),
+            deviceHeadingProvider: headingProvider,
+            locationTrackingManager: LocationTrackingManager(locationManager: CoreLocationManagerSpy())
+        )
+        viewModel.updateCamera(to: UniversalMapCamera(center: .init(latitude: 0, longitude: 0), zoom: 14, bearing: 10))
+        headingProvider.sendHeading(120)
+
+        XCTAssertTrue(viewModel.setUserTrackingMode(.course))
+        viewModel.locationTrackingManager.currentLocation = trackedLocation(
+            latitude: 41,
+            longitude: 69,
+            course: -1
+        )
+        await Task.yield()
+
+        let camera = try XCTUnwrap(viewModel.camera)
+        XCTAssertEqual(camera.bearing, 120)
+        XCTAssertEqual(camera.center.latitude, 41, accuracy: 0.0001)
+        XCTAssertEqual(camera.center.longitude, 69, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testHeadingTrackingFollowsLocationWithoutChangingDirection() async throws {
+        let provider = TintRecordingMapProvider()
+        let headingProvider = FakeDeviceHeadingProvider()
+        let viewModel = UniversalMapViewModel(
+            instance: provider,
+            providerType: .google,
+            config: MapConfig(config: TestUniversalMapConfig()),
+            deviceHeadingProvider: headingProvider,
+            locationTrackingManager: LocationTrackingManager(locationManager: CoreLocationManagerSpy())
+        )
+        viewModel.updateCamera(to: UniversalMapCamera(center: .init(latitude: 0, longitude: 0), zoom: 14, bearing: 33))
+
+        XCTAssertTrue(viewModel.setUserTrackingMode(.heading))
+        viewModel.locationTrackingManager.currentLocation = trackedLocation(
+            latitude: 42,
+            longitude: 70,
+            course: 180
+        )
+        await Task.yield()
+
+        let camera = try XCTUnwrap(viewModel.camera)
+        XCTAssertEqual(camera.bearing, 33)
+        XCTAssertEqual(camera.center.latitude, 42, accuracy: 0.0001)
+        XCTAssertEqual(camera.center.longitude, 70, accuracy: 0.0001)
+        XCTAssertFalse(headingProvider.isUpdatingHeading)
+    }
+
+    @MainActor
+    func testUserGestureCancelsTrackingModeAndNotifiesDelegate() {
+        let provider = TintRecordingMapProvider()
+        let headingProvider = FakeDeviceHeadingProvider()
+        let delegate = TrackingModeRecordingDelegate()
+        let viewModel = UniversalMapViewModel(
+            instance: provider,
+            providerType: .mapLibre,
+            config: MapConfig(config: TestUniversalMapConfig()),
+            deviceHeadingProvider: headingProvider,
+            locationTrackingManager: LocationTrackingManager(locationManager: CoreLocationManagerSpy())
+        )
+        viewModel.setInteractionDelegate(delegate)
+
+        XCTAssertTrue(viewModel.setUserTrackingMode(.course))
+        viewModel.mapDidStartDragging()
+
+        XCTAssertEqual(viewModel.userTrackingMode, .none)
+        XCTAssertFalse(headingProvider.isUpdatingHeading)
+        XCTAssertEqual(
+            delegate.changes,
+            [
+                .init(mode: .course, reason: .programmatic),
+                .init(mode: .none, reason: .userInteraction)
+            ]
+        )
+    }
 }
 
 private struct TestUniversalMapConfig: UniversalMapConfigProtocol {
@@ -68,6 +204,8 @@ private struct TestUniversalMapConfig: UniversalMapConfigProtocol {
 
 private final class TintRecordingMapProvider: NSObject, MapProviderProtocol {
     private(set) var tintColor: UIColor?
+    private(set) var updatedCameras: [UniversalMapCamera] = []
+    private(set) var nativeTrackingModes: [UserLocationtrackingMode] = []
     var capabilities: MapCapabilities = []
     var currentLocation: CLLocation?
     var markers: [String: any UniversalMapMarkerProtocol] = [:]
@@ -77,7 +215,9 @@ private final class TintRecordingMapProvider: NSObject, MapProviderProtocol {
         super.init()
     }
 
-    func updateCamera(to camera: UniversalMapCamera) {}
+    func updateCamera(to camera: UniversalMapCamera) {
+        updatedCameras.append(camera)
+    }
 
     func setEdgeInsets(_ insets: UniversalMapEdgeInsets) {}
 
@@ -118,7 +258,9 @@ private final class TintRecordingMapProvider: NSObject, MapProviderProtocol {
 
     func showUserLocation(_ show: Bool) {}
 
-    func setUserTrackingMode(mode: UserLocationtrackingMode) {}
+    func setUserTrackingMode(mode: UserLocationtrackingMode) {
+        nativeTrackingModes.append(mode)
+    }
 
     func set(preferredRefreshRate: MapRefreshRate) {}
 
@@ -146,4 +288,100 @@ private final class TintRecordingMapProvider: NSObject, MapProviderProtocol {
     func makeMapViewController() -> UIViewController {
         UIViewController()
     }
+}
+
+@MainActor
+private final class FakeDeviceHeadingProvider: DeviceHeadingProviding {
+    private(set) var currentHeading: DeviceHeading?
+    private(set) var headingOrientation: DeviceHeadingOrientation = .portrait
+    private(set) var isUpdatingHeading = false
+    var isHeadingAvailable = true
+    weak var delegate: DeviceHeadingProviderDelegate?
+
+    func startUpdatingHeading() {
+        isUpdatingHeading = true
+    }
+
+    func stopUpdatingHeading() {
+        isUpdatingHeading = false
+    }
+
+    func updateHeadingOrientation(_ orientation: DeviceHeadingOrientation) {
+        headingOrientation = orientation
+    }
+
+    func updateDeviceOrientation(_ orientation: UIDeviceOrientation) {}
+
+    func updateInterfaceOrientation(_ orientation: UIInterfaceOrientation) {}
+
+    func sendHeading(_ degrees: CLLocationDirection) {
+        guard let heading = DeviceHeading(
+            trueHeading: degrees,
+            magneticHeading: -1,
+            accuracy: 1
+        ) else { return }
+
+        currentHeading = heading
+        delegate?.deviceHeadingProvider(self, didUpdate: heading)
+    }
+}
+
+@MainActor
+private final class CoreLocationManagerSpy: CoreLocationManaging {
+    weak var delegate: CLLocationManagerDelegate?
+    var desiredAccuracy: CLLocationAccuracy = 0
+    var distanceFilter: CLLocationDistance = 0
+    var authorizationStatus: CLAuthorizationStatus = .authorizedWhenInUse
+
+    private(set) var requestWhenInUseAuthorizationCount = 0
+    private(set) var startUpdatingLocationCount = 0
+    private(set) var stopUpdatingLocationCount = 0
+
+    func requestWhenInUseAuthorization() {
+        requestWhenInUseAuthorizationCount += 1
+    }
+
+    func startUpdatingLocation() {
+        startUpdatingLocationCount += 1
+    }
+
+    func stopUpdatingLocation() {
+        stopUpdatingLocationCount += 1
+    }
+}
+
+private struct TrackingModeChange: Equatable {
+    let mode: UserLocationtrackingMode
+    let reason: UserTrackingModeChangeReason
+}
+
+@MainActor
+private final class TrackingModeRecordingDelegate: UniversalMapViewModelDelegate {
+    private(set) var changes: [TrackingModeChange] = []
+
+    func mapDidChangeUserTrackingMode(
+        map: MapProviderProtocol,
+        mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason
+    ) {
+        changes.append(.init(mode: mode, reason: reason))
+    }
+}
+
+private func trackedLocation(
+    latitude: CLLocationDegrees,
+    longitude: CLLocationDegrees,
+    course: CLLocationDirection
+) -> CLLocation {
+    CLLocation(
+        coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+        altitude: 0,
+        horizontalAccuracy: 5,
+        verticalAccuracy: 5,
+        course: course,
+        courseAccuracy: 1,
+        speed: 0,
+        speedAccuracy: 1,
+        timestamp: Date()
+    )
 }

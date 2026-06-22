@@ -11,7 +11,7 @@ import SwiftUI
 import MapLibre
 import CoreLocation
 
-public enum UserLocationtrackingMode: Sendable {
+public enum UserLocationtrackingMode: Sendable, Equatable {
     case heading
     case course
     case none
