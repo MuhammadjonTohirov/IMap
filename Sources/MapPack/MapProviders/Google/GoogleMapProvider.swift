@@ -112,7 +112,14 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     public var currentLocation: CLLocation? {
         lastKnownLocation ?? self.viewModel.mapView?.myLocation
     }
-    
+
+    /// A custom icon is drawn as a separate marker with `isMyLocationEnabled` off, so
+    /// only the custom camera controller can follow it — never Google's native tracking
+    /// (which is a stub here anyway).
+    public var hasCustomUserLocationIcon: Bool {
+        userLocationImage != nil
+    }
+
     public var markers: [String : any UniversalMapMarkerProtocol] {
         viewModel.allMarkers
     }
@@ -147,6 +154,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         }
 
         self.showUserLocation(self.shouldShowUserLocation)
+    }
+
+    @MainActor
+    public func setTintColor(_ color: UIColor) {
+        viewModel.setTintColor(color)
     }
     
     public func updateUserLocation(_ location: CLLocation) {
@@ -221,12 +233,12 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         let current = mapView.camera
         let rotated = GMSCameraPosition(
             target: current.target,
-            zoom: current.zoom,
+            zoom: 16,
             bearing: bearing,
             viewingAngle: current.viewingAngle
         )
         if animate {
-            mapView.animate(to: rotated)
+            mapView.animate(toBearing: bearing)
         } else {
             mapView.camera = rotated
         }

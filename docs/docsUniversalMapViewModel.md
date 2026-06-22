@@ -37,9 +37,9 @@ The current camera position and configuration.
 Whether to show the user's location on the map. Default: `true`.
 
 ```swift
-@Published public var userTrackingMode: Bool
+@Published public var userTrackingMode: UserLocationtrackingMode
 ```
-Whether to follow the user's location. Default: `false`.
+Controls whether MapPack follows the user's location. Default: `.none`.
 
 ```swift
 @Published public var edgeInsets: UniversalMapEdgeInsets
@@ -374,19 +374,30 @@ Shows or hides the user's location on the map.
 ### setUserTrackingMode(_:)
 
 ```swift
-public func setUserTrackingMode(_ tracking: Bool)
+@discardableResult
+public func setUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool
 ```
 
-Enables or disables user tracking mode (camera follows user).
+Sets MapPack-owned user tracking behavior for both Google Maps and MapLibre.
+
+- `.none`: stops following location and stops direction updates.
+- `.heading`: follows the current location without rotating the map.
+- `.course`: follows the current location and rotates the map using `CLLocation.course` when it is valid; otherwise it falls back to the device compass heading.
+
+When entering any non-`.none` mode the map first recenters on the current location (equivalent to `focusToCurrentLocation()`) so tracking begins centered on the user. If the current location is not yet available the recenter is skipped.
+
+User pan, pinch, zoom, rotate, or tilt gestures set the tracking mode back to `.none` and notify `UniversalMapViewModelDelegate`.
 
 ### set(userLocationIcon:scale:)
 
 ```swift
 @MainActor
-public func set(userLocationIcon: UIImage, scale: CGFloat = 1.0)
+public func set(userLocationIcon: UIImage?, scale: CGFloat = 1.0)
 ```
 
-Sets a custom icon for the user's location.
+Sets (or clears, when `nil`) a custom icon for the user's location. Setting an icon also
+switches user tracking to the custom camera follow described above; clearing it returns
+to native tracking.
 
 **Example:**
 
@@ -419,6 +430,21 @@ Sets the map style for a specific color scheme.
 ```swift
 viewModel.setMapStyle(GoogleLightMapStyle(), scheme: .light)
 viewModel.setMapStyle(GoogleDarkMapStyle(), scheme: .dark)
+```
+
+### setTintColor(_:)
+
+```swift
+@MainActor
+public func setTintColor(_ color: UIColor)
+```
+
+Sets the native map view tint color. For MapLibre this controls the default user-location dot color.
+
+**Example:**
+
+```swift
+viewModel.setTintColor(.systemBlue)
 ```
 
 ### showBuildings(_:)
@@ -501,6 +527,14 @@ class MyMapController: UniversalMapViewModelDelegate {
     
     func mapDidEndDragging(map: MapProviderProtocol, at location: CLLocation) {
         print("Map dragged to: \(location.coordinate)")
+    }
+
+    func mapDidChangeUserTrackingMode(
+        map: MapProviderProtocol,
+        mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason
+    ) {
+        print("Tracking mode changed to \(mode), reason: \(reason)")
     }
 }
 

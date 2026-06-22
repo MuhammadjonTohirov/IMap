@@ -140,7 +140,7 @@ func handleOnTrack(_ renderState: NavigationRouteTrackingRenderState) {
     renderConnector(renderState.connectorCoordinates)
 
     if renderState.hasArrived {
-        stopTracking()
+        stopRouteTracking()
     }
 }
 ```
@@ -197,17 +197,9 @@ trackingSession.setRouteHeadingStrategy(.threePointWeighted)
 
 ## Camera Follow is Optional
 
-Tracking and camera follow should be decoupled. Keep a separate toggle in presentation:
-
-```swift
-if isCameraFollowEnabled {
-    mapViewModel.trackMarker(markerId, zoom: 18)
-} else {
-    mapViewModel.stopTracking()
-}
-```
-
-This allows users to inspect the whole route while tracking still runs.
+Tracking and camera follow should be decoupled. Keep route progress rendering
+independent from presentation camera updates so users can inspect the route while
+tracking still runs.
 
 ## Production Notes
 
@@ -227,6 +219,5 @@ Your map adapter only needs these operations:
 - `renderMarker(at:heading:)`
 - `renderRemainingRoute(_:)`
 - `renderConnector(_:)`
-- `trackMarker(...)` / `stopTracking()`
 
 This keeps `NavigationTrackingCore` reusable across MapLibre, Google Maps, or any future provider.

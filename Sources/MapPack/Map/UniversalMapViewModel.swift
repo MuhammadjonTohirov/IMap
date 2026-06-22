@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 import CoreLocation
 import Combine
+import UIKit
 
 @MainActor
 public protocol UniversalMapViewModelDelegate: AnyObject {
@@ -20,6 +21,11 @@ public protocol UniversalMapViewModelDelegate: AnyObject {
     func mapDidTap(map: MapProviderProtocol, at coordinate: CLLocationCoordinate2D)
     func mapDidLoaded(map: MapProviderProtocol)
     func mapDidRotate(map: MapProviderProtocol, location: CLLocationCoordinate2D)
+    func mapDidChangeUserTrackingMode(
+        map: MapProviderProtocol,
+        mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason
+    )
 }
 
 // Default implementation
@@ -31,9 +37,14 @@ public extension UniversalMapViewModelDelegate {
     func mapDidTap(map: MapProviderProtocol, at coordinate: CLLocationCoordinate2D) {}
     func mapDidLoaded(map: MapProviderProtocol) {}
     func mapDidRotate(map: MapProviderProtocol, location: CLLocationCoordinate2D) {}
+    func mapDidChangeUserTrackingMode(
+        map: MapProviderProtocol,
+        mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason
+    ) {}
 }
 
-public struct AddressInfo {
+public struct AddressInfo: Sendable {
     public var name: String?
     public var location: CLLocationCoordinate2D?
     
@@ -48,7 +59,8 @@ public struct AddressInfo {
 public class UniversalMapViewModel: ObservableObject {
     // MARK: - Components
     @Published public var uiState = MapUIState()
-    public let locationTrackingManager = LocationTrackingManager()
+    public let locationTrackingManager: LocationTrackingManager
+    private let deviceHeadingProvider: any DeviceHeadingProviding
 
     // MARK: - Published Properties (Backward Compatibility / Facade)
     @Published public var mapProvider: MapProvider
@@ -66,7 +78,7 @@ public class UniversalMapViewModel: ObservableObject {
     public var userTrackingMode: UserLocationtrackingMode {
         get { uiState.userTrackingMode }
         set {
-            _ = applyUserTrackingMode(newValue)
+            _ = applyUserTrackingMode(newValue, reason: .programmatic)
         }
     }
     
@@ -107,6 +119,9 @@ public class UniversalMapViewModel: ObservableObject {
     public private(set) var mapProviderInstance: MapProviderProtocol
     
     private var markersById: [String: any UniversalMapMarkerProtocol] = [:]
+    private var tintColor: UIColor?
+    private var cancellables = Set<AnyCancellable>()
+    var latestDeviceHeading: DeviceHeading?
     
     var polylines: [UniversalMapPolyline] {
         Array(polylinesById.values)
@@ -117,20 +132,28 @@ public class UniversalMapViewModel: ObservableObject {
     // MARK: - Initialization
     
     /// Initialize with a specific map provider instance (Dependency Injection)
-    public init(instance: MapProviderProtocol, providerType: MapProvider, config: any MapConfigProtocol) {
+    public init(
+        instance: MapProviderProtocol,
+        providerType: MapProvider,
+        config: any MapConfigProtocol,
+        deviceHeadingProvider: (any DeviceHeadingProviding)? = nil,
+        locationTrackingManager: LocationTrackingManager? = nil
+    ) {
         self.mapProvider = providerType
         self.mapProviderInstance = instance
         self.config = config
+        self.deviceHeadingProvider = deviceHeadingProvider ?? DeviceHeadingProvider()
+        self.locationTrackingManager = locationTrackingManager ?? LocationTrackingManager()
         
         self.set(config: config)
         
         // Setup Managers
         self.locationTrackingManager.setMapProvider(instance)
-        self.locationTrackingManager.setDefaultZoomLevel(defaultZoomLevel)
+        self.deviceHeadingProvider.delegate = self
+        self.observeLocationUpdates()
 
         // Set up delegation
         self.mapProviderInstance.setInteractionDelegate(self)
-        self.locationTrackingManager.setDelegate(self)
         
         // Initialize the map provider with initial configuration
         self.updateMapProviderConfiguration()
@@ -200,8 +223,8 @@ public class UniversalMapViewModel: ObservableObject {
                 let cam = mapView.camera
                 return .init(
                     center: cam.centerCoordinate,
-                    zoom: mapView.zoom(forAltitude: cam.altitude),
-                    bearing: cam.heading,
+                    zoom: mapView.zoomLevel,
+                    bearing: mapView.direction,
                     pitch: cam.pitch,
                     animate: animate
                 )
@@ -237,10 +260,25 @@ public class UniversalMapViewModel: ObservableObject {
         // Keep the cached camera's bearing coherent for internal observers.
         camera?.bearing = bearing
     }
+
+    /// Set the map direction in degrees clockwise from true north.
+    ///
+    /// This is a MapLibre-friendly name for ``setBearing(_:animate:)``; both map
+    /// providers use the same normalized world heading.
+    public func setDirection(_ direction: CLLocationDirection, animated: Bool = true) {
+        setBearing(direction, animate: animated)
+    }
     
     /// Set the map style
     public func setMapStyle(_ style: any UniversalMapStyleProtocol, scheme: ColorScheme) {
         mapProviderInstance.setMapStyle(style, scheme: scheme)
+    }
+
+    /// Set the native map view tint color.
+    @MainActor
+    public func setTintColor(_ color: UIColor) {
+        tintColor = color
+        mapProviderInstance.setTintColor(color)
     }
     
     /// Show or hide the user's location
@@ -255,7 +293,7 @@ public class UniversalMapViewModel: ObservableObject {
     /// Enable or disable user tracking mode
     @discardableResult
     public func setUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool {
-        applyUserTrackingMode(mode)
+        applyUserTrackingMode(mode, reason: .programmatic)
     }
     
     /// Set the map edge insets
@@ -268,7 +306,6 @@ public class UniversalMapViewModel: ObservableObject {
     public func addMarker(_ marker: any UniversalMapMarkerProtocol) -> String {
         markersById[marker.id] = marker
         mapProviderInstance.addMarker(marker)
-        locationTrackingManager.handleMarkerUpdate(marker)
         return marker.id
     }
     
@@ -285,7 +322,6 @@ public class UniversalMapViewModel: ObservableObject {
         } else {
             mapProviderInstance.addMarker(marker)
         }
-        locationTrackingManager.handleMarkerUpdate(marker)
     }
     
     /// Remove a marker from the map
@@ -385,7 +421,10 @@ public class UniversalMapViewModel: ObservableObject {
     
     @MainActor
     public func focusToCurrentLocation(animated: Bool = true) {
-        guard let location = self.mapProviderInstance.currentLocation else { return }
+        guard let location = self.mapProviderInstance.currentLocation else {
+            Logging.l(tag: "UniversalMapViewModel", "Unable to get current location")
+            return
+        }
         
         self.mapProviderInstance.focusMap(
             on: location.coordinate,
@@ -436,6 +475,9 @@ public class UniversalMapViewModel: ObservableObject {
     @MainActor
     public func set(userLocationIcon: UIImage?, scale: CGFloat = 1.0) {
         mapProviderInstance.setUserLocationIcon(userLocationIcon, scale: scale)
+        // Adding or clearing a custom icon flips the follow between custom and native,
+        // so re-apply the active tracking mode through the updated rule.
+        _ = applyUserTrackingMode(uiState.userTrackingMode, reason: .programmatic)
     }
     
     @MainActor
@@ -458,8 +500,15 @@ public class UniversalMapViewModel: ObservableObject {
         }
         
         mapProviderInstance.showUserLocation(uiState.showUserLocation)
-        _ = applyUserTrackingMode(uiState.userTrackingMode)
+        _ = applyUserTrackingMode(
+            uiState.userTrackingMode,
+            reason: .programmatic,
+            notifyDelegate: false
+        )
         mapProviderInstance.setEdgeInsets(uiState.edgeInsets)
+        if let tintColor {
+            mapProviderInstance.setTintColor(tintColor)
+        }
         
         // Re-add all markers
         for marker in markersById.values {
@@ -472,150 +521,105 @@ public class UniversalMapViewModel: ObservableObject {
         }
     }
 
+    /// Apply a user-location tracking mode, picking the mechanism by whether a custom
+    /// current-location icon is set. Both providers go through this one rule:
+    ///
+    /// - **Custom icon** → follow with the in-house ``LocationTrackingManager``, because
+    ///   the SDK's native tracking can't follow a custom icon (Google draws it as a
+    ///   separate marker; for parity MapLibre uses the same path).
+    /// - **No icon** → use the provider's native tracking mode.
     @discardableResult
-    private func applyUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool {
-        let isSupported = mode == .none || mapProviderInstance.capabilities.contains(.userTrackingMode)
-        let appliedMode: UserLocationtrackingMode = isSupported ? mode : .none
-        uiState.userTrackingMode = appliedMode
-        mapProviderInstance.setUserTrackingMode(mode: appliedMode)
-        return isSupported
-    }
-}
+    private func applyUserTrackingMode(
+        _ mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason,
+        notifyDelegate: Bool = true
+    ) -> Bool {
+        let previousMode = uiState.userTrackingMode
+        uiState.userTrackingMode = mode
 
-// MARK: - LocationTrackingDelegate Implementation
-extension UniversalMapViewModel: LocationTrackingDelegate {
-    public func trackingDidStart(mode: MapTrackingMode) {
-        objectWillChange.send()
-    }
-    
-    public func trackingDidStop() {
-        objectWillChange.send()
-    }
-    
-    public func trackingDidFail(error: Error) {
-        objectWillChange.send()
-    }
-}
+        // Entering a tracking mode: snap to the user first so tracking starts centered on them.
+        // The recenter is intentionally non-animated — tracking is enabled immediately below, and
+        // an animated focus would be interrupted mid-flight by the first follow update, leaving the
+        // user off-center.
+        if mode != .none {
+            focusToCurrentLocation(animated: false)
+        }
 
-// MARK: - MapInteractionDelegate Implementation
-extension UniversalMapViewModel: MapInteractionDelegate {
-    public func mapDidStartDragging() {
-        self.addressInfo = nil
-        self.delegate?.mapDidStartDragging(map: self.mapProviderInstance)
-    }
-    
-    public func mapDidStartMoving() {
-        self.addressInfo = nil
-        self.delegate?.mapDidStartMoving(map: self.mapProviderInstance)
-    }
-    
-    public func mapDidEndDragging(at location: CLLocation) {
-        self.delegate?.mapDidEndDragging(map: self.mapProviderInstance, at: location)
-    }
-    
-    public func mapDidTapMarker(id: String) -> Bool {
-        self.delegate?.mapDidTapMarker(map: self.mapProviderInstance, id: id) ?? false
-    }
-    
-    public func mapDidTap(at coordinate: CLLocationCoordinate2D) {
-        self.delegate?.mapDidTap(map: self.mapProviderInstance, at: coordinate)
-    }
-    
-    public func mapDidLoaded() {
-        self.delegate?.mapDidLoaded(map: self.mapProviderInstance)
-    }
-    
-    public func mapDidRotate(to coordinate: CLLocationCoordinate2D) {
-        self.delegate?.mapDidRotate(map: self.mapProviderInstance, location: coordinate)
-    }
-}
+        // MapPack owns user tracking behavior so Google and MapLibre behave the same.
+        mapProviderInstance.setUserTrackingMode(mode: .none)
+        locationTrackingManager.setTrackingLocationUpdatesEnabled(mode != .none)
 
-// MARK: - Location Tracking Methods (Restored)
-public extension UniversalMapViewModel {
-    
-    /// Current tracking mode
-    var trackingMode: MapTrackingMode {
-        locationTrackingManager.trackingMode
+        if mode == .course {
+            if !deviceHeadingProvider.isUpdatingHeading {
+                deviceHeadingProvider.startUpdatingHeading()
+            }
+        } else {
+            deviceHeadingProvider.stopUpdatingHeading()
+        }
+
+        if mode == .none {
+            latestDeviceHeading = nil
+        }
+
+        if notifyDelegate, previousMode != mode {
+            delegate?.mapDidChangeUserTrackingMode(
+                map: mapProviderInstance,
+                mode: mode,
+                reason: reason
+            )
+        }
+
+        return true
     }
-    
-    /// Whether location tracking is active
-    var isLocationTrackingActive: Bool {
-        locationTrackingManager.isTrackingActive
+
+    private func observeLocationUpdates() {
+        locationTrackingManager.$currentLocation
+            .compactMap { $0 }
+            .sink { [weak self] location in
+                Task { @MainActor in
+                    self?.handleTrackedLocationUpdate(location)
+                }
+            }
+            .store(in: &cancellables)
     }
-    
-    /// Current tracked location
-    var trackedLocation: CLLocation? {
-        locationTrackingManager.currentLocation
+
+    private func handleTrackedLocationUpdate(_ location: CLLocation) {
+        switch uiState.userTrackingMode {
+        case .none:
+            return
+        case .heading:
+            followCurrentLocation(location)
+        case .course:
+            if let direction = courseTrackingDirection(for: location) {
+                setDirection(direction, animated: true)
+            }
+            followCurrentLocation(location)
+        }
     }
-    
-    /// Start tracking current location with camera following
-    /// - Parameter zoom: Optional zoom level (uses default if nil)
-    @MainActor
-    func trackCurrentLocationOnMap(
-        zoom: Double? = nil,
-        mode: CameraFollowMode = .northUp,
-        pitch: Double = 0,
-        followAnimationDuration: TimeInterval? = nil
-    ) {
-        locationTrackingManager.trackCurrentLocationOnMap(
-            zoom: zoom,
-            mode: mode,
-            pitch: pitch,
-            followAnimationDuration: followAnimationDuration
+
+    private func followCurrentLocation(_ location: CLLocation) {
+        let activeCamera = getCamera(animate: true) ?? camera
+        let followCamera = UniversalMapCamera(
+            center: location.coordinate,
+            zoom: activeCamera?.zoom ?? defaultZoomLevel,
+            bearing: activeCamera?.bearing ?? camera?.bearing ?? 0,
+            pitch: activeCamera?.pitch ?? camera?.pitch ?? 0,
+            animate: true,
+            animationDuration: activeCamera?.animationDuration
         )
+        updateCamera(to: followCamera)
     }
-    
-    /// Start tracking a specific marker with camera following
-    /// - Parameters:
-    ///   - markerId: ID of the marker to track
-    ///   - zoom: Optional zoom level (uses default if nil)
-    ///   - mode: Camera orientation while following (north-up or course-up)
-    ///   - pitch: Camera pitch in degrees (0 = looking straight down)
-    ///   - followAnimationDuration: Duration used when the follow camera animates
-    ///     (north-up moves). Course-up follows the heading instantly.
-    func trackMarker(
-        _ markerId: String,
-        zoom: Double? = nil,
-        mode: CameraFollowMode = .northUp,
-        pitch: Double = 0,
-        followAnimationDuration: TimeInterval? = nil
-    ) {
-        locationTrackingManager.trackMarker(
-            markerId,
-            zoom: zoom,
-            mode: mode,
-            pitch: pitch,
-            followAnimationDuration: followAnimationDuration
-        )
+
+    private func courseTrackingDirection(for location: CLLocation) -> CLLocationDirection? {
+        if location.course >= 0 {
+            return location.course
+        }
+
+        return latestDeviceHeading?.degrees ?? deviceHeadingProvider.currentHeading?.degrees
     }
-    
-    /// Stop all location and marker tracking
-    func stopTrackCurrentLocationOnMap() {
-        locationTrackingManager.stopTracking()
-    }
-   
-    @available(*, deprecated, renamed: "stopTrackCurrentLocationOnMap")
-    func stopTracking() {
-        locationTrackingManager.stopTracking()
-    }
-    
-    /// Enhanced addMarker that notifies tracking manager
-    @discardableResult
-    func addMarkerWithTracking(_ marker: any UniversalMapMarkerProtocol) -> String {
-        let markerId = addMarker(marker)
-        // Note: addMarker already calls handleMarkerUpdate in the new implementation,
-        // but explicit call here is safe (idempotent usually)
-        return markerId
-    }
-    
-    /// Enhanced marker update for active tracking scenarios.
-    func updateTrackedMarker(_ marker: any UniversalMapMarkerProtocol) {
-        updateMarker(marker)
-    }
-    
-    /// Enhanced setMapProvider that updates tracking
-    func setMapProviderWithTracking(_ provider: MapProvider, input: any MapConfigProtocol) {
-        setMapProvider(provider, config: input)
-        // Managers are already updated in setMapProvider
+
+    func cancelUserTrackingForInteraction() {
+        guard uiState.userTrackingMode != .none else { return }
+        _ = applyUserTrackingMode(.none, reason: .userInteraction)
     }
 }
