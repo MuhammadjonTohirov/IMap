@@ -35,6 +35,8 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     
     // Polylines currently on the map
     public private(set) var polylines: [String: GMSPolyline] = [:]
+
+    public private(set) var tintColor: UIColor?
     
     public private(set) var config: GoogleMapsConfigProtocol?
 
@@ -66,8 +68,17 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     
     func set(map: GMSMapView) {
         self.mapView = map
+        if let tintColor {
+            map.tintColor = tintColor
+        }
         // Initial refresh to render visible markers if any exist in the data source
         refreshVisibleMarkers()
+    }
+
+    @MainActor
+    func setTintColor(_ color: UIColor) {
+        tintColor = color
+        mapView?.tintColor = color
     }
     
     @MainActor

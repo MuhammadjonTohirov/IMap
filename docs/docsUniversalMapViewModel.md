@@ -37,9 +37,9 @@ The current camera position and configuration.
 Whether to show the user's location on the map. Default: `true`.
 
 ```swift
-@Published public var userTrackingMode: Bool
+@Published public var userTrackingMode: UserLocationtrackingMode
 ```
-Whether to follow the user's location. Default: `false`.
+Controls whether MapPack follows the user's location. Default: `.none`.
 
 ```swift
 @Published public var edgeInsets: UniversalMapEdgeInsets
@@ -378,23 +378,15 @@ Shows or hides the user's location on the map.
 public func setUserTrackingMode(_ mode: UserLocationtrackingMode) -> Bool
 ```
 
-Makes the camera follow the user's location. `mode` is `.heading`, `.course`, or
-`.none`. Returns whether the requested mode was applied.
+Sets MapPack-owned user tracking behavior for both Google Maps and MapLibre.
 
-The follow **mechanism is chosen automatically by whether a custom location icon is set**
-(via `set(userLocationIcon:scale:)`), and both providers (Google and MapLibre) obey the
-same rule:
+- `.none`: stops following location and stops direction updates.
+- `.heading`: follows the current location without rotating the map.
+- `.course`: follows the current location and rotates the map using `CLLocation.course` when it is valid; otherwise it falls back to the device compass heading.
 
-- **Custom icon set** → the camera is driven by the in-house `LocationTrackingManager`
-  follow. The SDK's native tracking can't follow a custom icon (Google renders it as a
-  separate marker), so `.heading`/`.course` rotate the map to the travel direction
-  (course-up) and `.none` stops following.
-- **No custom icon** → the provider's native tracking mode is used (MapLibre's
-  `MLNUserTrackingMode`; Google's native follow is not implemented, so the call is a
-  no-op and returns `false`).
+When entering any non-`.none` mode the map first recenters on the current location (equivalent to `focusToCurrentLocation()`) so tracking begins centered on the user. If the current location is not yet available the recenter is skipped.
 
-Switching the icon on or off automatically re-applies the active mode, so call order
-doesn't matter. Any independent `trackMarker(...)` follow is left untouched.
+User pan, pinch, zoom, rotate, or tilt gestures set the tracking mode back to `.none` and notify `UniversalMapViewModelDelegate`.
 
 ### set(userLocationIcon:scale:)
 
@@ -438,6 +430,21 @@ Sets the map style for a specific color scheme.
 ```swift
 viewModel.setMapStyle(GoogleLightMapStyle(), scheme: .light)
 viewModel.setMapStyle(GoogleDarkMapStyle(), scheme: .dark)
+```
+
+### setTintColor(_:)
+
+```swift
+@MainActor
+public func setTintColor(_ color: UIColor)
+```
+
+Sets the native map view tint color. For MapLibre this controls the default user-location dot color.
+
+**Example:**
+
+```swift
+viewModel.setTintColor(.systemBlue)
 ```
 
 ### showBuildings(_:)
@@ -520,6 +527,14 @@ class MyMapController: UniversalMapViewModelDelegate {
     
     func mapDidEndDragging(map: MapProviderProtocol, at location: CLLocation) {
         print("Map dragged to: \(location.coordinate)")
+    }
+
+    func mapDidChangeUserTrackingMode(
+        map: MapProviderProtocol,
+        mode: UserLocationtrackingMode,
+        reason: UserTrackingModeChangeReason
+    ) {
+        print("Tracking mode changed to \(mode), reason: \(reason)")
     }
 }
 

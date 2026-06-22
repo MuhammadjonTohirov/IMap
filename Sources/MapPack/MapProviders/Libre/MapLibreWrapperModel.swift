@@ -37,6 +37,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     public var userLocationImage: UIImage?
     public var userLocationIconScale: CGFloat = 1.0
     public var isAccuracyCircleHidden: Bool = true
+    public private(set) var tintColor: UIColor?
     
     public var config: (any UniversalMapConfigProtocol)?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
@@ -129,10 +130,19 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     func set(mapView: MLNMapView?) {
         self.mapView = mapView
+        if let tintColor {
+            mapView?.tintColor = tintColor
+        }
         mapView?.showsUserHeadingIndicator = true
         mapView?.userTrackingMode = requestedUserTrackingMode.maplibre
         // Attempt to drain if the view is already sized and style may be loaded
         scheduleReadinessChecks()
+    }
+
+    @MainActor
+    func setTintColor(_ color: UIColor) {
+        tintColor = color
+        mapView?.tintColor = color
     }
 
     func setUserTrackingMode(_ mode: UserLocationtrackingMode) {
@@ -156,19 +166,11 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         
         let perform = { [weak self] in
             guard let self = self, let mapView = self.mapView else { return }
-            let _zoom = (zoom ?? self.zoomLevel) / 1.036
-            
-            let widthPoints = mapView.bounds.width > 0 ? mapView.bounds.width : UIScreen.main.bounds.width
-            
-            let acrossDistance = self.metersAcrossAtZoomLevel(
-                _zoom,
-                latitude: coordinate.latitude,
-                screenWidthPoints: widthPoints
-            )
-            
+            let zoomLevel = zoom ?? self.zoomLevel
+            let altitude = mapView.altitude(forZoom: zoomLevel, pitch: 0, latitude: coordinate.latitude)
             let camera = MLNMapCamera(
                 lookingAtCenter: coordinate,
-                acrossDistance: acrossDistance,
+                altitude: altitude,
                 pitch: 0,
                 heading: 0
             )
@@ -185,23 +187,12 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     func flyTo(coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
         let perform = { [weak self] in
             guard let self = self, let mapView = self.mapView else { return }
-            let _zoom = (zoom ?? self.zoomLevel) / 1.036
-            
-            let widthPoints = mapView.bounds.width > 0 ? mapView.bounds.width : UIScreen.main.bounds.width
-            
-            let acrossDistance = self.metersAcrossAtZoomLevel(
-                _zoom,
-                latitude: coordinate.latitude,
-                screenWidthPoints: widthPoints
-            )
+            let zoomLevel = zoom ?? self.zoomLevel
+            let altitude = mapView.altitude(forZoom: zoomLevel, pitch: 0, latitude: coordinate.latitude)
             let camera = MLNMapCamera(lookingAtCenter: coordinate,
-                                     acrossDistance: acrossDistance,
+                                     altitude: altitude,
                                      pitch: 0,
                                      heading: 0)
-            
-            if let zoom = zoom {
-                mapView.zoomLevel = zoom
-            }
             
             mapView.setCamera(camera, animated: animated)
         }
@@ -331,6 +322,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         deviceHeading: CLHeading?,
         mapView: MLNMapView
     ) {
+        Logging.l(tag: "MapLibreWrapperModel", "Update user location \(mapView.zoomLevel) \(location.coordinate)")
         view.update(
             accuracy: location.horizontalAccuracy,
             zoom: mapView.zoomLevel,
@@ -513,18 +505,5 @@ extension MLNPointAnnotation {
 extension MLNAnnotation {
     var identifier: String {
         "\(self.coordinate.latitude),\(self.coordinate.longitude)"
-    }
-}
-
-extension MapLibreWrapperModel {
-    func metersAcrossAtZoomLevel(_ zoomLevel: Double, latitude: CLLocationDegrees, screenWidthPoints: CGFloat, scale: CGFloat = UIScreen.main.scale) -> Double {
-        let earthCircumference: Double = 40075016.686
-        let tileSize: Double = 256.0
-        let latitudeRadians = latitude * Double.pi / 180.0
-        let mapPixelSize = tileSize * pow(2.0, zoomLevel)
-        let metersPerPixel = (earthCircumference * cos(latitudeRadians)) / mapPixelSize
-        let screenWidthPixels = Double(screenWidthPoints) * Double(scale)
-
-        return metersPerPixel * screenWidthPixels
     }
 }

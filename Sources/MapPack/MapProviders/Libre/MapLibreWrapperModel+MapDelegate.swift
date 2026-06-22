@@ -14,6 +14,7 @@ import UIKit
 extension MapLibreWrapperModel: MLNMapViewDelegate {
     
     public func mapView(_ mapView: MLNMapView, regionIsChangingWith reason: MLNCameraChangeReason) {
+        Logging.l(tag: "MapLibre", "Region is changing with \(reason)")
         refreshAllMarkerViewRotations()
     }
     

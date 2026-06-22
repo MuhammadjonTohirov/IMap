@@ -11,7 +11,7 @@ import SwiftUI
 import MapLibre
 import CoreLocation
 
-public enum UserLocationtrackingMode {
+public enum UserLocationtrackingMode: Sendable, Equatable {
     case heading
     case course
     case none
@@ -77,19 +77,16 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     @MainActor
     public func updateCamera(to camera: UniversalMapCamera) {
         guard let mapView = viewModel.mapView else { return }
-        
-        // Use the actual map view width in points; fall back to screen width if needed
-        let widthPoints = mapView.bounds.width > 0 ? mapView.bounds.width : UIScreen.main.bounds.width
-        
-        let acrossDistance = viewModel.metersAcrossAtZoomLevel(
-            camera.zoom,
-            latitude: camera.center.latitude,
-            screenWidthPoints: widthPoints
+
+        let altitude = mapView.altitude(
+            forZoom: camera.zoom,
+            pitch: camera.pitch,
+            latitude: camera.center.latitude
         )
-        
+
         let targetCamera = MLNMapCamera(
             lookingAtCenter: camera.center,
-            acrossDistance: acrossDistance,
+            altitude: altitude,
             pitch: camera.pitch,
             heading: camera.bearing
         )
@@ -116,6 +113,11 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     @MainActor
     public func set(preferredRefreshRate: MapRefreshRate) {
         self.viewModel.set(preferredRefreshRate: preferredRefreshRate)
+    }
+
+    @MainActor
+    public func setTintColor(_ color: UIColor) {
+        viewModel.setTintColor(color)
     }
     
     public func setUserLocationIcon(_ image: UIImage?, scale: CGFloat) {

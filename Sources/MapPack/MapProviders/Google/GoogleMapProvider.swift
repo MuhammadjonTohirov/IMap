@@ -155,6 +155,11 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
 
         self.showUserLocation(self.shouldShowUserLocation)
     }
+
+    @MainActor
+    public func setTintColor(_ color: UIColor) {
+        viewModel.setTintColor(color)
+    }
     
     public func updateUserLocation(_ location: CLLocation) {
         self.lastKnownLocation = location
@@ -228,12 +233,12 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         let current = mapView.camera
         let rotated = GMSCameraPosition(
             target: current.target,
-            zoom: current.zoom,
+            zoom: 16,
             bearing: bearing,
             viewingAngle: current.viewingAngle
         )
         if animate {
-            mapView.animate(to: rotated)
+            mapView.animate(toBearing: bearing)
         } else {
             mapView.camera = rotated
         }
