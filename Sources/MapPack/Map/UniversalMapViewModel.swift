@@ -420,16 +420,22 @@ public class UniversalMapViewModel: ObservableObject {
     }
     
     @MainActor
-    public func focusToCurrentLocation(animated: Bool = true) {
+    public func focusToCurrentLocation(animated: Bool = true, keepPitch: Bool = false, keepHeading: Bool = false) {
         guard let location = self.mapProviderInstance.currentLocation else {
             Logging.l(tag: "UniversalMapViewModel", "Unable to get current location")
             return
         }
+
+        let activeCamera = getCamera(animate: false) ?? camera
+        let pitch = keepPitch ? CGFloat(activeCamera?.pitch ?? 0) : 0
+        let heading = keepHeading ? CGFloat(activeCamera?.bearing ?? 0) : 0
         
         self.mapProviderInstance.focusMap(
             on: location.coordinate,
             zoom: defaultZoomLevel,
-            animated: animated
+            animated: animated,
+            pitch: pitch,
+            heading: heading
         )
     }
     
@@ -475,8 +481,6 @@ public class UniversalMapViewModel: ObservableObject {
     @MainActor
     public func set(userLocationIcon: UIImage?, scale: CGFloat = 1.0) {
         mapProviderInstance.setUserLocationIcon(userLocationIcon, scale: scale)
-        // Adding or clearing a custom icon flips the follow between custom and native,
-        // so re-apply the active tracking mode through the updated rule.
         _ = applyUserTrackingMode(uiState.userTrackingMode, reason: .programmatic)
     }
     
@@ -542,11 +546,11 @@ public class UniversalMapViewModel: ObservableObject {
         // an animated focus would be interrupted mid-flight by the first follow update, leaving the
         // user off-center.
         if mode != .none {
-            focusToCurrentLocation(animated: false)
+            focusToCurrentLocation(animated: false, keepHeading: true)
         }
 
         // MapPack owns user tracking behavior so Google and MapLibre behave the same.
-        mapProviderInstance.setUserTrackingMode(mode: .none)
+//        mapProviderInstance.setUserTrackingMode(mode: mode)
         locationTrackingManager.setTrackingLocationUpdatesEnabled(mode != .none)
 
         if mode == .course {

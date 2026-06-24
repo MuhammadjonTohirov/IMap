@@ -159,7 +159,13 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     // MARK: - Custom Methods
     
-    func centerMap(on coordinate: CLLocationCoordinate2D, zoom: Double? = nil, animated: Bool = true) {
+    func centerMap(
+        on coordinate: CLLocationCoordinate2D,
+        zoom: Double? = nil,
+        animated: Bool = true,
+        pitch: CGFloat = 0,
+        heading: CGFloat = 0
+    ) {
         if coordinate.latitude == 0.0 || coordinate.longitude == 0.0 {
             return
         }
@@ -167,12 +173,16 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         let perform = { [weak self] in
             guard let self = self, let mapView = self.mapView else { return }
             let zoomLevel = zoom ?? self.zoomLevel
-            let altitude = mapView.altitude(forZoom: zoomLevel, pitch: 0, latitude: coordinate.latitude)
+            let altitude = mapView.altitude(
+                forZoom: zoomLevel,
+                pitch: pitch,
+                latitude: coordinate.latitude
+            )
             let camera = MLNMapCamera(
                 lookingAtCenter: coordinate,
                 altitude: altitude,
-                pitch: 0,
-                heading: 0
+                pitch: pitch,
+                heading: heading
             )
             mapView.setCamera(camera, animated: animated)
         }

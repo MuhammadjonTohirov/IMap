@@ -62,6 +62,72 @@ final class IMapTests: XCTestCase {
     }
 
     @MainActor
+    func testFocusToCurrentLocationKeepsRequestedPitchAndHeading() throws {
+        let provider = TintRecordingMapProvider()
+        let viewModel = UniversalMapViewModel(
+            instance: provider,
+            providerType: .mapLibre,
+            config: MapConfig(config: TestUniversalMapConfig())
+        )
+        provider.currentLocation = trackedLocation(
+            latitude: 41.31,
+            longitude: 69.28,
+            course: -1
+        )
+        viewModel.updateCamera(
+            to: UniversalMapCamera(
+                center: .init(latitude: 40, longitude: 68),
+                zoom: 14,
+                bearing: 75,
+                pitch: 35
+            )
+        )
+
+        viewModel.focusToCurrentLocation(
+            animated: false,
+            keepPitch: true,
+            keepHeading: true
+        )
+
+        let focus = try XCTUnwrap(provider.focusRequests.last)
+        XCTAssertEqual(focus.coordinate.latitude, 41.31, accuracy: 0.0001)
+        XCTAssertEqual(focus.coordinate.longitude, 69.28, accuracy: 0.0001)
+        XCTAssertEqual(focus.zoom, 17)
+        XCTAssertEqual(focus.pitch, 35)
+        XCTAssertEqual(focus.heading, 75)
+        XCTAssertFalse(focus.animated)
+    }
+
+    @MainActor
+    func testFocusToCurrentLocationResetsPitchAndHeadingByDefault() throws {
+        let provider = TintRecordingMapProvider()
+        let viewModel = UniversalMapViewModel(
+            instance: provider,
+            providerType: .google,
+            config: MapConfig(config: TestUniversalMapConfig())
+        )
+        provider.currentLocation = trackedLocation(
+            latitude: 41.31,
+            longitude: 69.28,
+            course: -1
+        )
+        viewModel.updateCamera(
+            to: UniversalMapCamera(
+                center: .init(latitude: 40, longitude: 68),
+                bearing: 75,
+                pitch: 35
+            )
+        )
+
+        viewModel.focusToCurrentLocation()
+
+        let focus = try XCTUnwrap(provider.focusRequests.last)
+        XCTAssertEqual(focus.pitch, 0)
+        XCTAssertEqual(focus.heading, 0)
+        XCTAssertTrue(focus.animated)
+    }
+
+    @MainActor
     func testUniversalMapViewModelReadsMapLibreZoomLevelDirectly() throws {
         let provider = MapLibreProvider()
         let mapView = MLNMapView(
@@ -257,9 +323,18 @@ private struct TestUniversalMapConfig: UniversalMapConfigProtocol {
     var darkStyle: String = ""
 }
 
+private struct FocusRequest {
+    let coordinate: CLLocationCoordinate2D
+    let zoom: Double?
+    let animated: Bool
+    let pitch: CGFloat
+    let heading: CGFloat
+}
+
 private final class TintRecordingMapProvider: NSObject, MapProviderProtocol {
     private(set) var tintColor: UIColor?
     private(set) var updatedCameras: [UniversalMapCamera] = []
+    private(set) var focusRequests: [FocusRequest] = []
     private(set) var nativeTrackingModes: [UserLocationtrackingMode] = []
     var capabilities: MapCapabilities = []
     var currentLocation: CLLocation?
@@ -278,7 +353,23 @@ private final class TintRecordingMapProvider: NSObject, MapProviderProtocol {
 
     func setMaxMinZoomLevels(min: Double, max: Double) {}
 
-    func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?, animated: Bool) {}
+    func focusMap(
+        on coordinate: CLLocationCoordinate2D,
+        zoom: Double?,
+        animated: Bool,
+        pitch: CGFloat,
+        heading: CGFloat
+    ) {
+        focusRequests.append(
+            FocusRequest(
+                coordinate: coordinate,
+                zoom: zoom,
+                animated: animated,
+                pitch: pitch,
+                heading: heading
+            )
+        )
+    }
 
     func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool) {}
 

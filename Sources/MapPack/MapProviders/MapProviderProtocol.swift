@@ -24,8 +24,14 @@ public protocol MapCameraControllable: AnyObject {
     /// Set min and max zoom levels
     func setMaxMinZoomLevels(min: Double, max: Double)
     
-    /// Focus on specific coordinates with optional zoom level
-    func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?, animated: Bool)
+    /// Focus on specific coordinates with optional zoom, pitch, and heading.
+    func focusMap(
+        on coordinate: CLLocationCoordinate2D,
+        zoom: Double?,
+        animated: Bool,
+        pitch: CGFloat,
+        heading: CGFloat
+    )
     
     /// Fit the map to show a specific polyline
     func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool)
@@ -186,6 +192,16 @@ public protocol MapProviderProtocol: NSObject, MapCameraControllable, MapMarkerM
 // MARK: - Default Extensions
 
 public extension MapCameraControllable {
+    func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?, animated: Bool) {
+        focusMap(
+            on: coordinate,
+            zoom: zoom,
+            animated: animated,
+            pitch: 0,
+            heading: 0
+        )
+    }
+
     func focusOn(coordinates: [CLLocationCoordinate2D], padding: CGFloat, animated: Bool) {
         self.focusOn(coordinates: coordinates, edges: .init(top: padding, left: padding, bottom: padding, right: padding), animated: animated)
     }

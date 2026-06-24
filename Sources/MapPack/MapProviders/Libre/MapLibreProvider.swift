@@ -269,8 +269,20 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         self.viewModel.set(mapDelegate: delegate)
     }
     
-    public func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?, animated: Bool) {
-        viewModel.centerMap(on: coordinate, zoom: zoom, animated: animated)
+    public func focusMap(
+        on coordinate: CLLocationCoordinate2D,
+        zoom: Double?,
+        animated: Bool,
+        pitch: CGFloat = 0,
+        heading: CGFloat = 0
+    ) {
+        viewModel.centerMap(
+            on: coordinate,
+            zoom: zoom,
+            animated: animated,
+            pitch: pitch,
+            heading: heading
+        )
     }
     
     public func focusOnPolyline(id: String, padding: UIEdgeInsets, animated: Bool) {
