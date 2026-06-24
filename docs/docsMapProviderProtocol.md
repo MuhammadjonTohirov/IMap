@@ -73,13 +73,21 @@ let camera = UniversalMapCamera(
 provider.updateCamera(to: camera)
 ```
 
-### focusMap(on:zoom:animated:)
+### focusMap(on:zoom:animated:pitch:heading:)
 
 ```swift
-func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?, animated: Bool)
+func focusMap(
+    on coordinate: CLLocationCoordinate2D,
+    zoom: Double?,
+    animated: Bool,
+    pitch: CGFloat,
+    heading: CGFloat
+)
 ```
 
-Focuses the map on a specific coordinate with optional zoom level.
+Focuses the map on a specific coordinate with optional zoom and explicit
+pitch and heading. The three-argument convenience overload resets pitch and
+heading to zero.
 
 ### focusOnPolyline(id:padding:animated:)
 
@@ -440,9 +448,21 @@ public class CustomMapProvider: NSObject, MapProviderProtocol {
 
 ## Protocol Extensions
 
-The protocol includes default implementations for convenience methods:
+The protocols include default implementations for convenience methods:
 
 ```swift
+public extension MapCameraControllable {
+    func focusMap(on coordinate: CLLocationCoordinate2D, zoom: Double?, animated: Bool) {
+        focusMap(
+            on: coordinate,
+            zoom: zoom,
+            animated: animated,
+            pitch: 0,
+            heading: 0
+        )
+    }
+}
+
 public extension MapProviderProtocol {
     func focusOn(coordinates: [CLLocationCoordinate2D], padding: CGFloat, animated: Bool) {
         // Converts uniform padding to edge insets

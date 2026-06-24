@@ -206,14 +206,20 @@ public func focusTo(coordinates: [CLLocationCoordinate2D], padding: CGFloat = 0,
 
 Focuses the map to show multiple coordinates.
 
-### focusToCurrentLocation(animated:)
+### focusToCurrentLocation(animated:keepPitch:keepHeading:)
 
 ```swift
 @MainActor
-public func focusToCurrentLocation(animated: Bool = true)
+public func focusToCurrentLocation(
+    animated: Bool = true,
+    keepPitch: Bool = false,
+    keepHeading: Bool = false
+)
 ```
 
-Focuses the map on the user's current location.
+Focuses the map on the user's current location. Set `keepPitch` or
+`keepHeading` to preserve the corresponding live camera value; values that
+are not preserved reset to zero.
 
 ## Marker Management
 

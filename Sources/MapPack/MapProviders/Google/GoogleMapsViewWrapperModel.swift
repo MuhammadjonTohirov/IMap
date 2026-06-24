@@ -94,15 +94,18 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     
     // MARK: - Camera helpers
     
-    func focusTo(coordinate: CLLocationCoordinate2D, zoom: Float = 15, viewAngle: Double = 0, animate: Bool = true) {
+    func focusTo(coordinate: CLLocationCoordinate2D, zoom: Float = 15, viewAngle: Double = 0, heading: Double = 0, animate: Bool = true) {
         if coordinate.latitude == 0 || coordinate.longitude == 0 {
             return
         }
         
         if animate {
-            mapView?.animate(to: GMSCameraPosition(target: coordinate, zoom: zoom, bearing: 0, viewingAngle: viewAngle))
+            mapView?
+                .animate(
+                    to: GMSCameraPosition(target: coordinate, zoom: zoom, bearing: heading, viewingAngle: viewAngle)
+                )
         } else {
-            mapView?.camera = GMSCameraPosition(target: coordinate, zoom: zoom, bearing: 0, viewingAngle: viewAngle)
+            mapView?.camera = GMSCameraPosition(target: coordinate, zoom: zoom, bearing: heading, viewingAngle: viewAngle)
         }
         // After camera change, ensure markers reflect visibility
         refreshVisibleMarkers()
