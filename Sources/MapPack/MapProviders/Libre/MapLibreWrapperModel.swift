@@ -312,6 +312,8 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     func updateUserLocation(_ userLocation: MLNUserLocation, in mapView: MLNMapView) {
         guard let location = userLocation.location else { return }
 
+        if self.userLocation == location { return }
+        
         self.userLocation = location
 
         guard let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView else {

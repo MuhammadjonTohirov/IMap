@@ -563,6 +563,10 @@ public class UniversalMapViewModel: ObservableObject {
 
         if mode == .none {
             latestDeviceHeading = nil
+
+            if previousMode != .none, reason == .programmatic {
+                focusToCurrentLocation(animated: true)
+            }
         }
 
         if notifyDelegate, previousMode != mode {
