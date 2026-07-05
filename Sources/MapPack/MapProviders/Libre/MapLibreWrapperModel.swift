@@ -336,7 +336,6 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         deviceHeading: CLHeading?,
         mapView: MLNMapView
     ) {
-        Logging.l(tag: "MapLibreWrapperModel", "Update user location \(mapView.zoomLevel) \(location.coordinate)")
         view.update(
             accuracy: location.horizontalAccuracy,
             zoom: mapView.zoomLevel,
