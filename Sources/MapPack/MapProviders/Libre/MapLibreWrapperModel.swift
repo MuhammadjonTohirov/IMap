@@ -37,6 +37,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     public var userLocationImage: UIImage?
     public var userLocationIconScale: CGFloat = 1.0
     public var isAccuracyCircleHidden: Bool = true
+    public private(set) var tintColor: UIColor?
     
     public var config: (any UniversalMapConfigProtocol)?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
@@ -129,10 +130,19 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     
     func set(mapView: MLNMapView?) {
         self.mapView = mapView
+        if let tintColor {
+            mapView?.tintColor = tintColor
+        }
         mapView?.showsUserHeadingIndicator = true
         mapView?.userTrackingMode = requestedUserTrackingMode.maplibre
         // Attempt to drain if the view is already sized and style may be loaded
         scheduleReadinessChecks()
+    }
+
+    @MainActor
+    func setTintColor(_ color: UIColor) {
+        tintColor = color
+        mapView?.tintColor = color
     }
 
     func setUserTrackingMode(_ mode: UserLocationtrackingMode) {

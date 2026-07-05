@@ -10,7 +10,7 @@ import SwiftUI
 import CoreLocation
 
 /// Encapsulates the UI state of the map overlay
-public struct MapUIState {
+public struct MapUIState: Sendable {
     public var hasAddressPicker: Bool = true
     public var hasAddressView: Bool = true
     public var addressInfo: AddressInfo?

@@ -352,7 +352,7 @@ extension LocationTrackingManager: LocationTrackingProtocol {
 }
 
 // MARK: - CLLocationManagerDelegate
-extension LocationTrackingManager: CLLocationManagerDelegate {
+extension LocationTrackingManager: @MainActor CLLocationManagerDelegate {
     
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }

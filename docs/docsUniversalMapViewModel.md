@@ -421,6 +421,21 @@ viewModel.setMapStyle(GoogleLightMapStyle(), scheme: .light)
 viewModel.setMapStyle(GoogleDarkMapStyle(), scheme: .dark)
 ```
 
+### setTintColor(_:)
+
+```swift
+@MainActor
+public func setTintColor(_ color: UIColor)
+```
+
+Sets the native map view tint color. For MapLibre this controls the default user-location dot color.
+
+**Example:**
+
+```swift
+viewModel.setTintColor(.systemBlue)
+```
+
 ### showBuildings(_:)
 
 ```swift

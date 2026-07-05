@@ -11,13 +11,13 @@ import UIKit
 import MapLibre
 
 /// A universal edge insets model that works with any map provider
-public struct UniversalMapEdgeInsets {
+public struct UniversalMapEdgeInsets: Sendable {
     /// The inset values
     public var insets: UIEdgeInsets
     /// Whether to animate inset changes
     public var animated: Bool
     /// Completion handler called after insets are applied
-    public var onEnd: (() -> Void)?
+    public var onEnd: (@Sendable () -> Void)?
     
     public init(
         top: CGFloat = 0,
@@ -25,7 +25,7 @@ public struct UniversalMapEdgeInsets {
         bottom: CGFloat = 0,
         right: CGFloat = 0,
         animated: Bool = false,
-        onEnd: (() -> Void)? = nil
+        onEnd: (@Sendable () -> Void)? = nil
     ) {
         self.insets = UIEdgeInsets(top: top, left: left, bottom: bottom, right: right)
         self.animated = animated
