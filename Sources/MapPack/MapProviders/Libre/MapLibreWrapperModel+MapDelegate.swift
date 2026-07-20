@@ -14,14 +14,14 @@ import UIKit
 extension MapLibreWrapperModel: MLNMapViewDelegate {
     
     public func mapView(_ mapView: MLNMapView, regionIsChangingWith reason: MLNCameraChangeReason) {
-        Logging.l(tag: "MapLibre", "Region is changing with \(reason)")
+//        Logging.l(tag: "MapLibre", "Region is changing with \(reason)")
         refreshAllMarkerViewRotations()
     }
     
     public func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
         Task { @MainActor in
             self.refreshAllMarkerViewRotations()
-            Logging.l("Map region did change animated: \(animated)")
+//            Logging.l("Map region did change animated: \(animated)")
             self.interactionDelegate?.mapDidEndDragging(
                 at: .init(
                     latitude: mapView.centerCoordinate.latitude,
