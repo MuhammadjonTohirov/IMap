@@ -23,11 +23,11 @@ public enum MapProvider: Identifiable, Equatable, Sendable {
 }
 
 /// Registry for map providers to support Open/Closed Principle
-public final class MapProviderRegistry: @unchecked Sendable {
+@MainActor
+public final class MapProviderRegistry {
     public static let shared = MapProviderRegistry()
     
     private var builders: [String: () -> MapProviderProtocol] = [:]
-    private let lock = NSLock()
 
     private init() {
         // Register default providers
@@ -36,15 +36,10 @@ public final class MapProviderRegistry: @unchecked Sendable {
     }
     
     public func register(id: String, builder: @escaping () -> MapProviderProtocol) {
-        lock.lock()
-        defer { lock.unlock() }
         builders[id] = builder
     }
     
     public func create(id: String) -> MapProviderProtocol {
-        lock.lock()
-        defer { lock.unlock() }
-        
         guard let builder = builders[id] else {
             fatalError("MapProvider for id '\(id)' is not registered.")
         }

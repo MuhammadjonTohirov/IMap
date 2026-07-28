@@ -11,6 +11,7 @@ import CoreLocation
 import UIKit
 import GoogleMaps
 
+@MainActor
 public protocol UniversalMapMarkerProtocol: Identifiable, Hashable {
     var id: String { get }
     var coordinate: CLLocationCoordinate2D { get }

@@ -38,5 +38,6 @@ let package = Package(
             name: "IMapTests",
             dependencies: ["MapPack"]
         ),
-    ]
+    ],
+    swiftLanguageVersions: [.version("6"), .v5]
 )

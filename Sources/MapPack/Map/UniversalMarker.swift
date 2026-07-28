@@ -9,7 +9,12 @@ import Foundation
 import MapLibre
 import GoogleMaps
 
-public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarkerProtocol {
+/// A map marker whose UIKit and map-SDK state is confined to the main actor.
+///
+/// `@unchecked Sendable` bridges `GMSMarker`'s legacy nonisolated copying API;
+/// `copy()` asserts main-actor execution before reading or recreating marker state.
+@MainActor
+public final class UniversalMarker: GMSMarker, @MainActor MLNAnnotation, UniversalMapMarkerProtocol, @unchecked Sendable {
     public typealias AnnotationViewCompletionHandler = (UniversalMarker) -> UIView?
     
     public let id: String
@@ -97,16 +102,19 @@ public final class UniversalMarker: GMSMarker, MLNAnnotation, UniversalMapMarker
     }
     
     public override func copy() -> Any {
-        let new = type(of: self).init(
-            id: self.id,
-            coordinate: self.coordinate,
-            view: self.view ?? UIView(),
-            reuseIdentifier: self.reuseIdentifier
-        )
-        new.rotation = self.rotation
-        new.compensatesForMapBearing = self.compensatesForMapBearing
-        new.worldHeading = self.worldHeading
-        return new
+        let marker: UniversalMarker = MainActor.assumeIsolated {
+            let new = type(of: self).init(
+                id: id,
+                coordinate: coordinate,
+                view: view ?? UIView(),
+                reuseIdentifier: reuseIdentifier
+            )
+            new.rotation = rotation
+            new.compensatesForMapBearing = compensatesForMapBearing
+            new.worldHeading = worldHeading
+            return new
+        }
+        return marker
     }
 }
 

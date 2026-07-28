@@ -21,6 +21,7 @@ public struct MapUIState: Sendable {
     
     public init() {}
     
+    @MainActor
     public var pinViewBottomOffset: CGFloat {
         let sarea = UIApplication.shared.safeArea
         let bottomOffset = self.edgeInsets.insets.bottom - sarea.top

@@ -17,6 +17,7 @@ public protocol LibreMapsKeyProvider: UniversalMapConfigProtocol, AnyObject {
     
 }
 
+@MainActor
 open class MapLibreWrapperModel: NSObject, ObservableObject {
     // Map view reference
     public private(set) weak var mapView: MLNMapView?
@@ -55,7 +56,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     let userAccuracyLayerID = "user-accuracy-layer"
     
     // Animation state
-    var activePolylineAnimations: [String: Timer] = [:]
+    var activePolylineAnimations: [String: AnyCancellable] = [:]
 
     /// Last map bearing for which marker-view rotations were refreshed, used to skip
     /// redundant per-frame work when the bearing has not changed.

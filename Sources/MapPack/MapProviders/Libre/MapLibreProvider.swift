@@ -39,7 +39,8 @@ public struct MapLibreLightStyle: UniversalMapStyleProtocol {
 }
 
 /// Implementation of the map provider protocol for MapLibre
-public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
+@MainActor
+public class MapLibreProvider: NSObject, MapProviderProtocol {
     public private(set) var viewModel = MapLibreWrapperModel()
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?

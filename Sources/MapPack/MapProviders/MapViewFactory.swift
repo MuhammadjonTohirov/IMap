@@ -9,6 +9,7 @@
 import SwiftUI
 
 /// Factory for creating map provider instances
+@MainActor
 public protocol MapViewFactory: Sendable {
     /// Create a map provider based on the specified type
     static func createMapProvider(type: MapProvider) -> MapProviderProtocol

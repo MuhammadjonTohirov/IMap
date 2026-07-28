@@ -144,7 +144,7 @@ extension MapLibreWrapperModel {
         }
         
         // Cancel existing animation
-        activePolylineAnimations[polyline.id]?.invalidate()
+        activePolylineAnimations[polyline.id]?.cancel()
         activePolylineAnimations[polyline.id] = nil
         
         let sourceId = "polyline-source-\(polyline.id)"
@@ -200,16 +200,14 @@ extension MapLibreWrapperModel {
         let totalSteps = duration * fps
         let pointsPerStep = max(1, Int(ceil(Double(count) / totalSteps)))
         
-        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                timer.invalidate()
-                return
-            }
+        let publisher = Timer.publish(every: interval, on: .main, in: .default).autoconnect()
+        let animation = publisher.sink { [weak self] _ in
+            guard let self else { return }
             
             // Check existence
             guard let style = self.mapView?.style,
                   let source = style.source(withIdentifier: "polyline-source-\(id)") as? MLNShapeSource else {
-                timer.invalidate()
+                self.activePolylineAnimations[id]?.cancel()
                 self.activePolylineAnimations[id] = nil
                 return
             }
@@ -223,11 +221,11 @@ extension MapLibreWrapperModel {
             currentIndex = endIndex
             
             if currentIndex >= count {
-                timer.invalidate()
+                self.activePolylineAnimations[id]?.cancel()
                 self.activePolylineAnimations[id] = nil
             }
         }
-        self.activePolylineAnimations[id] = timer
+        activePolylineAnimations[id] = animation
     }
     
     /// Add a polyline from raw coordinates
@@ -267,7 +265,7 @@ extension MapLibreWrapperModel {
         guard let index = savedPolylines.firstIndex(where: { $0.id == id }) else { return }
         
         // Cancel existing animation
-        activePolylineAnimations[id]?.invalidate()
+        activePolylineAnimations[id]?.cancel()
         activePolylineAnimations[id] = nil
         
         // Create updated struct (since MapPolyline is immutable)
@@ -323,7 +321,7 @@ extension MapLibreWrapperModel {
     /// Remove a polyline from the map
     /// - Parameter polylineId: ID of the polyline to remove
     public func removePolyline(id polylineId: String) {
-        activePolylineAnimations[polylineId]?.invalidate()
+        activePolylineAnimations[polylineId]?.cancel()
         activePolylineAnimations[polylineId] = nil
         
         guard let style = mapView?.style,
@@ -346,6 +344,9 @@ extension MapLibreWrapperModel {
     
     /// Clear all polylines from the map
     public func clearAllPolylines() {
+        activePolylineAnimations.values.forEach { $0.cancel() }
+        activePolylineAnimations.removeAll()
+
         guard let style = mapView?.style else { return }
         
         // Remove all polylines

@@ -27,6 +27,31 @@ final class IMapTests: XCTestCase {
     }
 
     @MainActor
+    func testUniversalMarkerCopyPreservesMapState() throws {
+        let markerView = UIView(frame: CGRect(x: 0, y: 0, width: 24, height: 36))
+        let coordinate = CLLocationCoordinate2D(latitude: 41.3111, longitude: 69.2797)
+        let marker = UniversalMarker(
+            id: "tracked-user",
+            coordinate: coordinate,
+            view: markerView,
+            reuseIdentifier: "tracked-user-view"
+        )
+        marker.set(compensatesForMapBearing: true)
+        marker.set(heading: 137)
+
+        let copiedMarker = try XCTUnwrap(marker.copy() as? UniversalMarker)
+
+        XCTAssertEqual(copiedMarker.id, marker.id)
+        XCTAssertEqual(copiedMarker.coordinate.latitude, coordinate.latitude)
+        XCTAssertEqual(copiedMarker.coordinate.longitude, coordinate.longitude)
+        XCTAssertEqual(copiedMarker.reuseIdentifier, marker.reuseIdentifier)
+        XCTAssertEqual(copiedMarker.rotation, marker.rotation)
+        XCTAssertEqual(copiedMarker.worldHeading, marker.worldHeading)
+        XCTAssertEqual(copiedMarker.compensatesForMapBearing, marker.compensatesForMapBearing)
+        XCTAssertTrue(copiedMarker.view === markerView)
+    }
+
+    @MainActor
     func testUniversalMapViewModelForwardsTintColorToProvider() {
         let provider = TintRecordingMapProvider()
         let viewModel = UniversalMapViewModel(
@@ -199,7 +224,7 @@ final class IMapTests: XCTestCase {
             XCTAssertTrue(viewModel.setUserTrackingMode(.course))
 
             XCTAssertEqual(viewModel.userTrackingMode, .course)
-            XCTAssertEqual(provider.nativeTrackingModes.last, UserLocationtrackingMode.none)
+            XCTAssertTrue(provider.nativeTrackingModes.isEmpty)
             XCTAssertEqual(coreLocationManager.startUpdatingLocationCount, 1)
             XCTAssertTrue(headingProvider.isUpdatingHeading)
         }
@@ -331,6 +356,7 @@ private struct FocusRequest {
     let heading: CGFloat
 }
 
+@MainActor
 private final class TintRecordingMapProvider: NSObject, MapProviderProtocol {
     private(set) var tintColor: UIColor?
     private(set) var updatedCameras: [UniversalMapCamera] = []
