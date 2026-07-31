@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 import GoogleMaps
 import SwiftUI
 import CoreLocation
@@ -19,9 +20,10 @@ public protocol GoogleMapsConfigProtocol: UniversalMapConfigProtocol {
     var accessKey: String { get }
 }
 
+@MainActor
 open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     // The actual Google map view
-    var activePolylineAnimations: [String: Timer] = [:]
+    var activePolylineAnimations: [String: AnyCancellable] = [:]
 
     public private(set) weak var mapView: GMSMapView?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
@@ -35,6 +37,7 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     
     // Polylines currently on the map
     public private(set) var polylines: [String: GMSPolyline] = [:]
+    public private(set) var polylineCasings: [String: GMSPolyline] = [:]
 
     public private(set) var tintColor: UIColor?
     
@@ -56,9 +59,7 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
         }
         
         didAppear = true
-        Task { @MainActor in
-            self.interactionDelegate?.mapDidLoaded()
-        }
+        interactionDelegate?.mapDidLoaded()
     }
     
     @MainActor
@@ -264,14 +265,12 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     }
 }
 
-extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
+extension GoogleMapsViewWrapperModel: @MainActor GMSMapViewDelegate {
     public func mapView(_ mapView: GMSMapView, willMove gesture: Bool) {
-        Task {@MainActor in
-            if gesture {
-                self.interactionDelegate?.mapDidStartDragging()
-            } else {
-                self.interactionDelegate?.mapDidStartMoving()
-            }
+        if gesture {
+            interactionDelegate?.mapDidStartDragging()
+        } else {
+            interactionDelegate?.mapDidStartMoving()
         }
     }
     
@@ -280,17 +279,15 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
         refreshVisibleMarkers()
         refreshAllRenderedMarkerRotations()
         
-        Task {@MainActor in
-            let location: CLLocation = .init(
-                coordinate: position.target,
-                altitude: 0, horizontalAccuracy: 0,
-                verticalAccuracy: 0,
-                course: position.bearing,
-                speed: 0,
-                timestamp: Date()
-            )
-            self.interactionDelegate?.mapDidEndDragging(at: location)
-        }
+        let location: CLLocation = .init(
+            coordinate: position.target,
+            altitude: 0, horizontalAccuracy: 0,
+            verticalAccuracy: 0,
+            course: position.bearing,
+            speed: 0,
+            timestamp: Date()
+        )
+        interactionDelegate?.mapDidEndDragging(at: location)
     }
     
     public func mapView(_ mapView: GMSMapView, didChange position: GMSCameraPosition) {
@@ -309,13 +306,6 @@ extension GoogleMapsViewWrapperModel: GMSMapViewDelegate {
         }
     }
     
-    public func mapViewDidFinishTileRendering(_ mapView: GMSMapView) {
-        // TODO: Handle tile rendering
-    }
-    
-    public func mapViewSnapshotReady(_ mapView: GMSMapView) {
-        // TODO: Snapshot ready
-    }
 }
 
 public extension GoogleMapsViewWrapperModel {
@@ -380,15 +370,22 @@ public extension GoogleMapsViewWrapperModel {
     
     // MARK: - Polyline management
         
-    func addPolyline(id: String, polyline: GMSPolyline, animated: Bool = false) {
+    func addPolyline(
+        id: String,
+        polyline: GMSPolyline,
+        casing: GMSPolyline? = nil,
+        animated: Bool = false
+    ) {
         // Cancel existing animation
-        activePolylineAnimations[id]?.invalidate()
+        activePolylineAnimations[id]?.cancel()
         activePolylineAnimations[id] = nil
         
         // Remove existing if any to avoid duplicates/leaks
         if let existing = self.polylines[id] {
             existing.map = nil
         }
+        polylineCasings[id]?.map = nil
+        polylineCasings[id] = casing
         
         self.polylines[id] = polyline
         
@@ -399,15 +396,28 @@ public extension GoogleMapsViewWrapperModel {
             emptyPath.add(fullPath.coordinate(at: 0))
             
             polyline.path = emptyPath
+            casing?.path = emptyPath
+            casing?.map = self.mapView
             polyline.map = self.mapView
-            
-            animatePolylineDrawing(id: id, polyline: polyline, fullPath: fullPath)
+
+            animatePolylineDrawing(
+                id: id,
+                polyline: polyline,
+                casing: casing,
+                fullPath: fullPath
+            )
         } else {
+            casing?.map = self.mapView
             polyline.map = self.mapView
         }
     }
     
-    private func animatePolylineDrawing(id: String, polyline: GMSPolyline, fullPath: GMSPath) {
+    private func animatePolylineDrawing(
+        id: String,
+        polyline: GMSPolyline,
+        casing: GMSPolyline?,
+        fullPath: GMSPath
+    ) {
         let count = fullPath.count()
         var currentIndex: UInt = 1
         // Animation config
@@ -417,15 +427,13 @@ public extension GoogleMapsViewWrapperModel {
         let totalSteps = duration * fps
         let pointsPerStep = max(1, UInt(ceil(Double(count) / totalSteps)))
         
-        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                timer.invalidate()
-                return
-            }
+        let publisher = Timer.publish(every: interval, on: .main, in: .default).autoconnect()
+        let animation = publisher.sink { [weak self] _ in
+            guard let self else { return }
             
             // Check if polyline still exists and is the same instance
             guard let currentPolyline = self.polylines[id], currentPolyline == polyline else {
-                timer.invalidate()
+                self.activePolylineAnimations[id]?.cancel()
                 self.activePolylineAnimations[id] = nil
                 return
             }
@@ -440,22 +448,23 @@ public extension GoogleMapsViewWrapperModel {
             }
             
             polyline.path = currentPath
+            casing?.path = currentPath
             currentIndex = endIndex
             
             if currentIndex >= count {
-                timer.invalidate()
+                self.activePolylineAnimations[id]?.cancel()
                 self.activePolylineAnimations[id] = nil
             }
         }
         
-        activePolylineAnimations[id] = timer
+        activePolylineAnimations[id] = animation
     }
     
     func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D], animated: Bool = false) {
         guard let polyline = self.polylines[id] else { return }
         
         // Cancel active animation if any, and set full path immediately if not animating
-        activePolylineAnimations[id]?.invalidate()
+        activePolylineAnimations[id]?.cancel()
         activePolylineAnimations[id] = nil
         
         let path = coordinates.gmsPath()
@@ -469,61 +478,50 @@ public extension GoogleMapsViewWrapperModel {
                 emptyPath.add(coordinates[0])
             }
             polyline.path = emptyPath
-            animatePolylineDrawing(id: id, polyline: polyline, fullPath: path)
+            polylineCasings[id]?.path = emptyPath
+            animatePolylineDrawing(
+                id: id,
+                polyline: polyline,
+                casing: polylineCasings[id],
+                fullPath: path
+            )
         } else {
             polyline.path = path
+            polylineCasings[id]?.path = path
         }
     }
     
     func updatePolyline(id: String, with newPolyline: UniversalMapPolyline, animated: Bool = false) {
-        // If it doesn't exist, we can add it, or just return.
-        guard let polyline = self.polylines[id] else {
-            // Fallback to add
-            addPolyline(id: id, polyline: newPolyline.gmsPolyline(), animated: animated)
-            return
-        }
-        
-        activePolylineAnimations[id]?.invalidate()
-        activePolylineAnimations[id] = nil
-        
-        let path = newPolyline.coordinates.gmsPath()
-
-        polyline.strokeColor = newPolyline.color
-        polyline.strokeWidth = newPolyline.width
-        polyline.geodesic = newPolyline.geodesic
-        
-        if animated {
-            let emptyPath = GMSMutablePath()
-            if newPolyline.coordinates.count > 0 {
-                emptyPath.add(newPolyline.coordinates[0])
-            }
-            polyline.path = emptyPath
-            animatePolylineDrawing(id: id, polyline: polyline, fullPath: path)
-        } else {
-            polyline.path = path
-        }
+        addPolyline(
+            id: id,
+            polyline: newPolyline.gmsPolyline(),
+            casing: newPolyline.gmsCasingPolyline(),
+            animated: animated
+        )
     }
     
     func removePolyline(id: String) {
-        activePolylineAnimations[id]?.invalidate()
+        activePolylineAnimations[id]?.cancel()
         activePolylineAnimations[id] = nil
         
-        guard let polyline = self.polylines[id] else {
-            return
-        }
-        
-        polyline.map = nil
+        self.polylines[id]?.map = nil
         self.polylines[id] = nil
+        polylineCasings[id]?.map = nil
+        polylineCasings[id] = nil
     }
     
     func removeAllPolylines() {
-        activePolylineAnimations.values.forEach { $0.invalidate() }
+        activePolylineAnimations.values.forEach { $0.cancel() }
         activePolylineAnimations.removeAll()
         
         self.polylines.values.forEach {
             $0.map = nil
         }
+        polylineCasings.values.forEach {
+            $0.map = nil
+        }
         self.polylines.removeAll()
+        polylineCasings.removeAll()
     }
 }
 
@@ -562,12 +560,26 @@ private extension GoogleMapsViewWrapperModel {
 }
 
 extension UniversalMapPolyline {
+    @MainActor
     func gmsPolyline(isCarLine: Bool = true) -> GMSPolyline {
         let gmsPolyline = GMSPolyline(path: coordinates.gmsPath())
         gmsPolyline.accessibilityLabel = id
         gmsPolyline.strokeColor = color
         gmsPolyline.strokeWidth = width
         gmsPolyline.geodesic = geodesic
+        return gmsPolyline
+    }
+
+    @MainActor
+    func gmsCasingPolyline() -> GMSPolyline? {
+        guard let casing else { return nil }
+
+        let gmsPolyline = GMSPolyline(path: coordinates.gmsPath())
+        gmsPolyline.accessibilityLabel = "\(id)-casing"
+        gmsPolyline.strokeColor = casing.color
+        gmsPolyline.strokeWidth = max(casing.width, width)
+        gmsPolyline.geodesic = geodesic
+        gmsPolyline.zIndex = -1
         return gmsPolyline
     }
 }

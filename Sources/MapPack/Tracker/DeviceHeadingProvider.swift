@@ -17,7 +17,7 @@ public final class DeviceHeadingProvider: NSObject, ObservableObject, DeviceHead
 
     private let locationManager: CLLocationManager
     private let automaticallyUpdatesHeadingOrientation: Bool
-    private var orientationObserver: NSObjectProtocol?
+    private var isObservingDeviceOrientation = false
     private var isGeneratingDeviceOrientationNotifications = false
 
     public init(
@@ -36,13 +36,6 @@ public final class DeviceHeadingProvider: NSObject, ObservableObject, DeviceHead
     }
 
     deinit {
-        locationManager.stopUpdatingHeading()
-        locationManager.delegate = nil
-
-        if let orientationObserver {
-            NotificationCenter.default.removeObserver(orientationObserver)
-        }
-
         if isGeneratingDeviceOrientationNotifications {
             DispatchQueue.main.async {
                 UIDevice.current.endGeneratingDeviceOrientationNotifications()
@@ -97,32 +90,39 @@ public final class DeviceHeadingProvider: NSObject, ObservableObject, DeviceHead
     }
 
     private func startObservingDeviceOrientation() {
-        guard orientationObserver == nil else { return }
+        guard !isObservingDeviceOrientation else { return }
 
         UIDevice.current.beginGeneratingDeviceOrientationNotifications()
         isGeneratingDeviceOrientationNotifications = true
 
-        orientationObserver = NotificationCenter.default.addObserver(
-            forName: UIDevice.orientationDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.updateDeviceOrientation(UIDevice.current.orientation)
-            }
-        }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(deviceOrientationDidChange(_:)),
+            name: UIDevice.orientationDidChangeNotification,
+            object: nil
+        )
+        isObservingDeviceOrientation = true
     }
 
     private func stopObservingDeviceOrientation() {
-        if let orientationObserver {
-            NotificationCenter.default.removeObserver(orientationObserver)
-            self.orientationObserver = nil
+        if isObservingDeviceOrientation {
+            NotificationCenter.default.removeObserver(
+                self,
+                name: UIDevice.orientationDidChangeNotification,
+                object: nil
+            )
+            isObservingDeviceOrientation = false
         }
 
         if isGeneratingDeviceOrientationNotifications {
             UIDevice.current.endGeneratingDeviceOrientationNotifications()
             isGeneratingDeviceOrientationNotifications = false
         }
+    }
+
+    @objc
+    private func deviceOrientationDidChange(_ notification: Notification) {
+        updateDeviceOrientation(UIDevice.current.orientation)
     }
 }
 

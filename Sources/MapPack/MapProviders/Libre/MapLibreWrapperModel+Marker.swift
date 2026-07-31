@@ -21,12 +21,3 @@ extension MapLibreWrapperModel {
         self.applyMarkerViewRotation(annotation)
     }
 }
-
-extension CLLocationCoordinate2D: @retroactive Equatable {
-    public static func ==(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
-        if lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude {
-            return true
-        }
-        return false
-    }
-}

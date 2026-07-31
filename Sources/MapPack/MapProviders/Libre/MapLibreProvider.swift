@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 import MapLibre
 import CoreLocation
+import RealityKit
 
 public enum UserLocationtrackingMode: Sendable, Equatable {
     case heading
@@ -39,12 +40,15 @@ public struct MapLibreLightStyle: UniversalMapStyleProtocol {
 }
 
 /// Implementation of the map provider protocol for MapLibre
-public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
+@MainActor
+public class MapLibreProvider: NSObject, MapProviderProtocol {
     public private(set) var viewModel = MapLibreWrapperModel()
+    private let userLocation3DModelLoader: any UserLocation3DModelLoading
     private var mapCamera: MapCamera?
     private var mapInsets: MapEdgeInsets?
     private var showsUserLocation: Bool = true
     private var requestedUserTrackingMode: UserLocationtrackingMode = .none
+    private var userLocationAppearanceRequestID = UUID()
     public var userTrackingMode: MLNUserTrackingMode? {
         requestedUserTrackingMode.maplibre
     }
@@ -57,7 +61,12 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     /// icon routes tracking through the custom camera follow; no icon uses native
     /// `MLNUserTrackingMode`.
     public var hasCustomUserLocationIcon: Bool {
-        viewModel.userLocationImage != nil
+        switch viewModel.userLocationAppearance {
+        case .standard:
+            return false
+        case .image, .model3D:
+            return true
+        }
     }
 
     public var markers: [String: any UniversalMapMarkerProtocol] {
@@ -67,10 +76,23 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     public var polylines: [String: UniversalMapPolyline] = [:]
     
     public var capabilities: MapCapabilities {
-        return [.userTrackingMode, .buildings, .styling, .polylines]
+        return [
+            .userTrackingMode,
+            .buildings,
+            .styling,
+            .polylines,
+            .threeDimensionalUserLocation,
+            .turnByTurnNavigation
+        ]
     }
     
     required public override init() {
+        self.userLocation3DModelLoader = BundledUserLocation3DModelLoader()
+        super.init()
+    }
+
+    init(userLocation3DModelLoader: any UserLocation3DModelLoading) {
+        self.userLocation3DModelLoader = userLocation3DModelLoader
         super.init()
     }
     
@@ -121,29 +143,67 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
     }
     
     public func setUserLocationIcon(_ image: UIImage?, scale: CGFloat) {
-        viewModel.userLocationImage = image
-        viewModel.userLocationIconScale = scale
+        userLocationAppearanceRequestID = UUID()
 
-        if image == nil {
+        if let image {
+            applyUserLocationAppearance(.image(image, scale: scale), modelEntity: nil)
+        } else {
+            applyUserLocationAppearance(.standard, modelEntity: nil)
+        }
+    }
+
+    public func setUserLocationAppearance(_ appearance: UserLocationAppearance) async throws {
+        let requestID = UUID()
+        userLocationAppearanceRequestID = requestID
+
+        switch appearance {
+        case .standard, .image:
+            applyUserLocationAppearance(appearance, modelEntity: nil)
+        case let .model3D(model):
+            let entity = try await userLocation3DModelLoader.loadModel(model)
+            try Task.checkCancellation()
+            guard userLocationAppearanceRequestID == requestID else {
+                throw CancellationError()
+            }
+            applyUserLocationAppearance(appearance, modelEntity: entity)
+        }
+    }
+
+    private func applyUserLocationAppearance(
+        _ appearance: UserLocationAppearance,
+        modelEntity: Entity?
+    ) {
+        viewModel.userLocationAppearance = appearance
+        viewModel.userLocation3DModelEntity = modelEntity
+
+        switch appearance {
+        case .standard:
+            viewModel.userLocationImage = nil
+            viewModel.userLocationIconScale = 1
             showUserLocationAccuracy(false)
+        case let .image(image, scale):
+            viewModel.userLocationImage = image
+            viewModel.userLocationIconScale = scale
+        case .model3D:
+            viewModel.userLocationImage = nil
+            viewModel.userLocationIconScale = 0.7
         }
 
-        // Update existing annotation view directly to avoid resetting MLNUserLocation position
-        if let image,
-           let mapView = viewModel.mapView,
-           let userLocation = mapView.userLocation,
-           let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView {
-            view.setup(image: image, scale: scale)
+        guard let mapView = viewModel.mapView,
+              let userLocation = mapView.userLocation else {
             return
         }
 
-        // No existing view, or clearing the icon — toggle to trigger view re-creation
-        if let userLocation = viewModel.mapView?.userLocation {
-            viewModel.mapView?.removeAnnotation(userLocation)
-            if showsUserLocation {
-                viewModel.mapView?.showsUserLocation = false
-                viewModel.mapView?.showsUserLocation = true
-            }
+        if let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView,
+           viewModel.configureUserLocationView(view) {
+            return
+        }
+
+        // Switching to or from the native indicator requires MapLibre to ask its
+        // delegate for the user-location view again.
+        mapView.showsUserLocation = false
+        if showsUserLocation {
+            mapView.showsUserLocation = true
         }
     }
     
@@ -188,6 +248,7 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
             title: polyline.title,
             color: polyline.color,
             width: polyline.width,
+            casing: polyline.casing,
             animated: animated
         )
     }
@@ -197,7 +258,12 @@ public class MapLibreProvider: NSObject, @preconcurrency MapProviderProtocol {
         // Update coordinates
         viewModel.updatePolyline(id: polyline.id, coordinates: polyline.coordinates, animated: animated)
         // Update style
-        viewModel.updatePolyline(id: polyline.id, color: polyline.color, width: polyline.width)
+        viewModel.updatePolyline(
+            id: polyline.id,
+            color: polyline.color,
+            width: polyline.width,
+            casing: polyline.casing
+        )
     }
     
     public func updatePolyline(id: String, coordinates: [CLLocationCoordinate2D], animated: Bool) {

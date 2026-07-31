@@ -14,6 +14,7 @@ import UIKit
 // MARK: - Interface Segregation Protocols
 
 /// Protocol for controlling the map camera and viewport
+@MainActor
 public protocol MapCameraControllable: AnyObject {
     /// Update the camera position
     func updateCamera(to camera: UniversalMapCamera)
@@ -47,6 +48,7 @@ public protocol MapCameraControllable: AnyObject {
 }
 
 /// Protocol for managing markers on the map
+@MainActor
 public protocol MapMarkerManageable: AnyObject {
     var markers: [String: any UniversalMapMarkerProtocol] { get }
     
@@ -66,6 +68,7 @@ public protocol MapMarkerManageable: AnyObject {
 }
 
 /// Protocol for managing polylines on the map
+@MainActor
 public protocol MapPolylineManageable: AnyObject {
     var polylines: [String: UniversalMapPolyline] { get }
     
@@ -86,6 +89,7 @@ public protocol MapPolylineManageable: AnyObject {
 }
 
 /// Protocol for managing user location display and tracking
+@MainActor
 public protocol MapUserLocationDisplayable: AnyObject {
     var currentLocation: CLLocation? { get }
 
@@ -105,6 +109,12 @@ public protocol MapUserLocationDisplayable: AnyObject {
     func setUserTrackingMode(mode: UserLocationtrackingMode)
     
     func setUserLocationIcon(_ image: UIImage?, scale: CGFloat)
+
+    /// Change the current-location presentation.
+    ///
+    /// The asynchronous form lets providers prepare resources, such as a USDZ model,
+    /// without blocking the main thread.
+    func setUserLocationAppearance(_ appearance: UserLocationAppearance) async throws
     
     func updateUserLocation(_ location: CLLocation)
     
@@ -112,6 +122,7 @@ public protocol MapUserLocationDisplayable: AnyObject {
 }
 
 /// Protocol for styling the map
+@MainActor
 public protocol MapStylable: AnyObject {
     /// set preferred refresh rate
     func set(preferredRefreshRate: MapRefreshRate)
@@ -129,6 +140,7 @@ public protocol MapStylable: AnyObject {
 }
 
 /// Protocol for map interaction handling
+@MainActor
 public protocol MapInteractable: AnyObject {
     /// Set the interaction delegate
     func setInteractionDelegate(_ delegate: MapInteractionDelegate?)
@@ -138,6 +150,7 @@ public protocol MapInteractable: AnyObject {
 }
 
 /// Protocol for creating the map view
+@MainActor
 public protocol MapViewable: AnyObject {
     /// Get the SwiftUI view for this map provider
     func makeMapView() -> AnyView
@@ -147,6 +160,7 @@ public protocol MapViewable: AnyObject {
 ///
 /// This is the UIKit counterpart of ``MapViewable``. SwiftUI hosts use
 /// ``MapViewable/makeMapView()``; UIKit hosts use ``makeMapViewController()``.
+@MainActor
 public protocol MapUIKitViewable: AnyObject {
     /// Returns a `UIViewController` hosting the provider's native map, for UIKit integration.
     @MainActor
@@ -174,12 +188,19 @@ public struct MapCapabilities: OptionSet, Sendable {
     
     /// Supports polyline manipulation
     public static let polylines = MapCapabilities(rawValue: 1 << 3)
+
+    /// Supports a live, camera-aware 3D current-location model.
+    public static let threeDimensionalUserLocation = MapCapabilities(rawValue: 1 << 4)
+
+    /// Supports a dedicated full-screen turn-by-turn navigation controller.
+    public static let turnByTurnNavigation = MapCapabilities(rawValue: 1 << 5)
 }
 
 // MARK: - Main Protocol
 
 /// Protocol defining the common interface for map providers
 /// Adheres to Interface Segregation Principle by composing smaller protocols
+@MainActor
 public protocol MapProviderProtocol: NSObject, MapCameraControllable, MapMarkerManageable, MapPolylineManageable, MapUserLocationDisplayable, MapStylable, MapInteractable, MapViewable, MapUIKitViewable {
     
     /// The capabilities supported by this provider
@@ -230,6 +251,23 @@ public extension MapUserLocationDisplayable {
     func updateUserLocation(_ location: CLLocation) {}
 
     func showUserLocationAccuracy(_ show: Bool) {}
+}
+
+public extension MapUserLocationDisplayable where Self: MapProviderProtocol {
+    /// Source-compatible fallback for providers that only implement the existing image
+    /// customization API.
+    func setUserLocationAppearance(_ appearance: UserLocationAppearance) async throws {
+        switch appearance {
+        case .standard:
+            setUserLocationIcon(nil, scale: 1)
+        case let .image(image, scale):
+            setUserLocationIcon(image, scale: scale)
+        case .model3D:
+            throw UserLocationAppearanceError.unsupportedThreeDimensionalModel(
+                providerName: String(describing: type(of: self))
+            )
+        }
+    }
 }
 
 public extension MapUIKitViewable where Self: MapViewable {

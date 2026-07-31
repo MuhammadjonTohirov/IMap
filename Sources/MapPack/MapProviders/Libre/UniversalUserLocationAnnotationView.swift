@@ -8,11 +8,12 @@
 import Foundation
 import UIKit
 import MapLibre
+import RealityKit
 
-class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
+final class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
     private let circleView = UIView()
     private var iconView: UIImageView?
-    private var iconSize: CGSize = .zero
+    private var modelView: MapLibreUserLocation3DView?
     
     private var lastAccuracy: CLLocationAccuracy = 0
     private var lastLatitude: CLLocationDegrees = 0
@@ -25,7 +26,7 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
     }
     
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        nil
     }
     
     private func setupViews() {
@@ -36,9 +37,14 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
         circleView.isUserInteractionEnabled = false
         addSubview(circleView)
         sendSubviewToBack(circleView)
+        isAccessibilityElement = true
+        accessibilityLabel = "Current location"
     }
     
     func setup(image: UIImage, scale: CGFloat) {
+        modelView?.removeFromSuperview()
+        modelView = nil
+
         if iconView == nil {
             let iv = UIImageView(image: image)
             iv.contentMode = .scaleAspectFit
@@ -48,7 +54,7 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
             iconView?.image = image
         }
         
-        self.iconSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let iconSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
         // Reset any rotation before frame math, then restore it afterwards.
         iconView?.transform = .identity
         iconView?.frame = CGRect(origin: .zero, size: iconSize)
@@ -57,6 +63,24 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
         self.frame = iconView?.frame ?? .zero
         iconView?.center = CGPoint(x: frame.width/2, y: frame.height/2)
         applyRotation()
+    }
+
+    func setup(model: Entity, configuration: UserLocation3DModel) {
+        iconView?.removeFromSuperview()
+        iconView = nil
+        modelView?.removeFromSuperview()
+
+        let newModelView = MapLibreUserLocation3DView(
+            model: model,
+            configuration: configuration
+        )
+        newModelView.frame = CGRect(origin: .zero, size: configuration.viewportSize)
+        addSubview(newModelView)
+        bringSubviewToFront(newModelView)
+        modelView = newModelView
+
+        frame = newModelView.frame
+        newModelView.setDisplayHeading(displayRotation)
     }
     
     func setCircleHidden(_ hidden: Bool) {
@@ -69,6 +93,12 @@ class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
     func setDisplayRotation(_ degrees: CLLocationDirection) {
         self.displayRotation = degrees
         applyRotation()
+        modelView?.setDisplayHeading(degrees)
+    }
+
+    /// Matches the 3D marker's virtual camera to MapLibre's live camera pitch.
+    func setMapPitch(_ degrees: CGFloat) {
+        modelView?.setMapPitch(degrees)
     }
 
     private func applyRotation() {

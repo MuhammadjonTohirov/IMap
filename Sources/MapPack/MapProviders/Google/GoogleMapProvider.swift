@@ -97,7 +97,8 @@ class UserLocationMarkerView: UIView {
 }
 
 /// Implementation of the map provider protocol for Google Maps
-public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
+@MainActor
+public class GoogleMapsProvider: NSObject, MapProviderProtocol {
     private(set) var viewModel: GoogleMapsViewWrapperModel = .init()
     
     public private(set) var polylines: [String : UniversalMapPolyline] = [:]
@@ -154,6 +155,21 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
         }
 
         self.showUserLocation(self.shouldShowUserLocation)
+    }
+
+    public func setUserLocationAppearance(_ appearance: UserLocationAppearance) async throws {
+        switch appearance {
+        case .standard:
+            setUserLocationIcon(nil, scale: 1)
+        case let .image(image, scale):
+            setUserLocationIcon(image, scale: scale)
+        case .model3D:
+            let error = UserLocationAppearanceError.unsupportedThreeDimensionalModel(
+                providerName: "Google Maps"
+            )
+            Logging.error(tag: "GoogleMaps", error.localizedDescription)
+            throw error
+        }
     }
 
     @MainActor
@@ -288,7 +304,12 @@ public class GoogleMapsProvider: NSObject, @preconcurrency MapProviderProtocol {
     
     public func addPolyline(_ polyline: UniversalMapPolyline, animated: Bool) {
         self.polylines[polyline.id] = polyline
-        self.viewModel.addPolyline(id: polyline.id, polyline: polyline.gmsPolyline(), animated: animated)
+        self.viewModel.addPolyline(
+            id: polyline.id,
+            polyline: polyline.gmsPolyline(),
+            casing: polyline.gmsCasingPolyline(),
+            animated: animated
+        )
     }
     
     public func updatePolyline(_ polyline: UniversalMapPolyline, animated: Bool) {

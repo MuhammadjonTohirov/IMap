@@ -12,11 +12,13 @@ import SwiftUI
 import Combine
 import UIKit
 import CoreLocation
+import RealityKit
 
 public protocol LibreMapsKeyProvider: UniversalMapConfigProtocol, AnyObject {
     
 }
 
+@MainActor
 open class MapLibreWrapperModel: NSObject, ObservableObject {
     // Map view reference
     public private(set) weak var mapView: MLNMapView?
@@ -36,11 +38,17 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     // User Location Customization
     public var userLocationImage: UIImage?
     public var userLocationIconScale: CGFloat = 1.0
+    var userLocationAppearance: UserLocationAppearance = .standard
+    var userLocation3DModelEntity: Entity?
     public var isAccuracyCircleHidden: Bool = true
     public private(set) var tintColor: UIColor?
     
     public var config: (any UniversalMapConfigProtocol)?
     public private(set) weak var interactionDelegate: MapInteractionDelegate?
+
+    var isPitchEnabled: Bool {
+        (config as? any MapLibreConfigProtocol)?.isPitchEnabled ?? false
+    }
 
     // Style fallback management
     private(set) var hasAttemptedFallback: Bool = false
@@ -55,7 +63,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     let userAccuracyLayerID = "user-accuracy-layer"
     
     // Animation state
-    var activePolylineAnimations: [String: Timer] = [:]
+    var activePolylineAnimations: [String: AnyCancellable] = [:]
 
     /// Last map bearing for which marker-view rotations were refreshed, used to skip
     /// redundant per-frame work when the bearing has not changed.
@@ -126,6 +134,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
     @MainActor
     func set(config: any UniversalMapConfigProtocol) {
         self.config = config
+        mapView?.isPitchEnabled = isPitchEnabled
     }
     
     func set(mapView: MLNMapView?) {
@@ -135,6 +144,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         }
         mapView?.showsUserHeadingIndicator = true
         mapView?.userTrackingMode = requestedUserTrackingMode.maplibre
+        mapView?.isPitchEnabled = isPitchEnabled
         // Attempt to drain if the view is already sized and style may be loaded
         scheduleReadinessChecks()
     }
@@ -149,7 +159,7 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         requestedUserTrackingMode = mode
         mapView?.showsUserHeadingIndicator = true
         mapView?.userTrackingMode = mode.maplibre
-        refreshUserLocationViewRotation(mapBearing: currentMapBearing)
+        refreshUserLocationViewTransform(mapBearing: currentMapBearing)
     }
     
     @MainActor
@@ -309,10 +319,35 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         }
     }
 
+    @discardableResult
+    func configureUserLocationView(_ view: UniversalUserLocationAnnotationView) -> Bool {
+        switch userLocationAppearance {
+        case .standard:
+            return false
+        case let .image(image, scale):
+            view.setup(image: image, scale: scale)
+        case let .model3D(configuration):
+            guard let userLocation3DModelEntity else {
+                Logging.error(
+                    tag: "MapLibre",
+                    "The 3D current-location view was requested before its model was loaded."
+                )
+                return false
+            }
+            view.setup(model: userLocation3DModelEntity, configuration: configuration)
+        }
+
+        view.setCircleHidden(isAccuracyCircleHidden)
+        view.setMapPitch(mapView?.camera.pitch ?? 0)
+        return true
+    }
+
     func updateUserLocation(_ userLocation: MLNUserLocation, in mapView: MLNMapView) {
         guard let location = userLocation.location else { return }
 
-        if self.userLocation == location { return }
+        if self.userLocation == location {
+            return
+        }
         
         self.userLocation = location
 
@@ -334,12 +369,12 @@ open class MapLibreWrapperModel: NSObject, ObservableObject {
         deviceHeading: CLHeading?,
         mapView: MLNMapView
     ) {
-        Logging.l(tag: "MapLibreWrapperModel", "Update user location \(mapView.zoomLevel) \(location.coordinate)")
         view.update(
             accuracy: location.horizontalAccuracy,
             zoom: mapView.zoomLevel,
             latitude: location.coordinate.latitude
         )
+        view.setMapPitch(mapView.camera.pitch)
 
         guard let heading = userLocationHeading(
             location: location,
@@ -413,26 +448,34 @@ extension MapLibreWrapperModel {
         // Only markers that compensate for the map bearing change their displayed
         // angle when the camera moves; others are refreshed on their own update.
         let bearing = currentMapBearing
-        if let last = lastMarkerViewBearing, abs(bearing - last) <= 0.0001 {
-            return
-        }
-        lastMarkerViewBearing = bearing
+        let bearingChanged = lastMarkerViewBearing.map {
+            abs(bearing - $0) > 0.0001
+        } ?? true
 
-        for marker in markers.values where marker.compensatesForMapBearing {
-            applyMarkerViewRotation(marker)
+        if bearingChanged {
+            lastMarkerViewBearing = bearing
+
+            for marker in markers.values where marker.compensatesForMapBearing {
+                applyMarkerViewRotation(marker)
+            }
         }
-        refreshUserLocationViewRotation(mapBearing: bearing)
+
+        // Pitch changes without a bearing change during a tilt gesture, so the
+        // current-location transform must always be refreshed.
+        refreshUserLocationViewTransform(mapBearing: bearing)
     }
 
-    /// Re-compensates the custom user-location icon's rotation for the current map
-    /// bearing, so it keeps pointing along the travel direction as the map rotates.
-    private func refreshUserLocationViewRotation(mapBearing: CLLocationDirection) {
-        guard let heading = userLocationWorldHeading,
-              let mapView,
+    /// Synchronizes the current-location marker with both bearing and pitch.
+    private func refreshUserLocationViewTransform(mapBearing: CLLocationDirection) {
+        guard let mapView,
               let userLocation = mapView.userLocation,
               let view = mapView.view(for: userLocation) as? UniversalUserLocationAnnotationView else {
             return
         }
+
+        view.setMapPitch(mapView.camera.pitch)
+
+        guard let heading = userLocationWorldHeading else { return }
         view.setDisplayRotation(displayRotation(for: heading, mapView: mapView, mapBearing: mapBearing))
     }
 
