@@ -73,23 +73,22 @@ extension MapLibreWrapperModel: @MainActor MLNMapViewDelegate {
     public func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
 
         if annotation is MLNUserLocation {
-            guard let image = userLocationImage else { return nil }
+            guard case .standard = userLocationAppearance else {
+                let reuseId = "user-location-custom"
 
-            let reuseId = "user-location-custom"
+                // Try to reuse
+                var view = mapView.dequeueReusableAnnotationView(withIdentifier: reuseId) as? UniversalUserLocationAnnotationView
 
-            // Try to reuse
-            var view = mapView.dequeueReusableAnnotationView(withIdentifier: reuseId) as? UniversalUserLocationAnnotationView
+                if view == nil {
+                    view = UniversalUserLocationAnnotationView(annotation: annotation, reuseIdentifier: reuseId)
+                }
 
-            if view == nil {
-                view = UniversalUserLocationAnnotationView(annotation: annotation, reuseIdentifier: reuseId)
-            }
+                guard let view, configureUserLocationView(view) else {
+                    return nil
+                }
 
-            view?.setup(image: image, scale: userLocationIconScale)
-            view?.setCircleHidden(isAccuracyCircleHidden)
-
-            // Initial update if location is known
-            if let userLoc = annotation as? MLNUserLocation, let location = userLoc.location {
-                if let view {
+                // Initial update if location is known
+                if let userLoc = annotation as? MLNUserLocation, let location = userLoc.location {
                     updateUserLocationView(
                         view,
                         location: location,
@@ -97,9 +96,11 @@ extension MapLibreWrapperModel: @MainActor MLNMapViewDelegate {
                         mapView: mapView
                     )
                 }
+
+                return view
             }
 
-            return view
+            return nil
         }
 
         guard let pointAnnotation = annotation as? UniversalMarker,

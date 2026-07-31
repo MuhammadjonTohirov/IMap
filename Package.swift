@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.3
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -15,8 +15,8 @@ let package = Package(
     ],
     dependencies: [
         // ✅ Google Maps SDK via SPM
-        .package(url: "https://github.com/googlemaps/ios-maps-sdk", from: "10.10.0"),
-        .package(url: "https://github.com/maplibre/maplibre-navigation-ios", branch: "main")
+        .package(url: "https://github.com/googlemaps/ios-maps-sdk", from: "10.15.0"),
+        .package(url: "https://github.com/maplibre/maplibre-navigation-ios", exact: "4.1.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -32,6 +32,7 @@ let package = Package(
                 .product(name: "MapboxNavigation", package: "maplibre-navigation-ios"),
             ],
             resources: [
+                .process("Resources")
             ]
         ),
         .testTarget(
@@ -39,5 +40,5 @@ let package = Package(
             dependencies: ["MapPack"]
         ),
     ],
-    swiftLanguageVersions: [.version("6"), .v5]
+    swiftLanguageModes: [.version("6"), .v5]
 )

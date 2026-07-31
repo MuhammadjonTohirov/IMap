@@ -15,4 +15,9 @@ struct Logging {
             .debug("\(message(), privacy: .public)")
         #endif
     }
+
+    static func error(tag: String = "MapPack", _ message: @autoclosure @escaping () -> String) {
+        Logger(subsystem: "MapPack", category: tag)
+            .error("\(message(), privacy: .public)")
+    }
 }

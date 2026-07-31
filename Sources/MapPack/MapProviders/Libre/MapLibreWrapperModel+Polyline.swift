@@ -149,9 +149,13 @@ extension MapLibreWrapperModel {
         
         let sourceId = "polyline-source-\(polyline.id)"
         let layerId = "polyline-layer-\(polyline.id)"
+        let casingLayerId = "polyline-casing-layer-\(polyline.id)"
         
         // Clean up previous layers if any
         if let layer = style.layer(withIdentifier: layerId) { style.removeLayer(layer) }
+        if let casingLayer = style.layer(withIdentifier: casingLayerId) {
+            style.removeLayer(casingLayer)
+        }
         if let source = style.source(withIdentifier: sourceId) { style.removeSource(source) }
         
         // Determine initial coordinates
@@ -183,6 +187,19 @@ extension MapLibreWrapperModel {
         
         // Add source and layer to map
         style.addSource(source)
+        if let casing = polyline.casing {
+            let casingLayer = MLNLineStyleLayer(
+                identifier: casingLayerId,
+                source: source
+            )
+            casingLayer.lineColor = NSExpression(forConstantValue: casing.color)
+            casingLayer.lineWidth = NSExpression(
+                forConstantValue: max(casing.width, polyline.width)
+            )
+            casingLayer.lineCap = NSExpression(forConstantValue: "round")
+            casingLayer.lineJoin = NSExpression(forConstantValue: "round")
+            style.addLayer(casingLayer)
+        }
         style.addLayer(lineLayer)
         
         if animated && polyline.coordinates.count > 1 {
@@ -237,7 +254,15 @@ extension MapLibreWrapperModel {
     ///   - width: Width of the line
     /// - Returns: The created polyline object
     @discardableResult
-    public func addPolyline(id: String? = nil, coordinates: [CLLocationCoordinate2D], title: String? = nil, color: UIColor = .blue, width: CGFloat = 3.0, animated: Bool = false) -> MapPolyline {
+    public func addPolyline(
+        id: String? = nil,
+        coordinates: [CLLocationCoordinate2D],
+        title: String? = nil,
+        color: UIColor = .blue,
+        width: CGFloat = 3.0,
+        casing: UniversalMapPolylineCasing? = nil,
+        animated: Bool = false
+    ) -> MapPolyline {
         let polylineId = id ?? UUID().uuidString
         
         // Remove existing if any (to prevent duplicates if same ID passed)
@@ -249,7 +274,8 @@ extension MapLibreWrapperModel {
             title: title,
             coordinates: coordinates,
             color: color,
-            width: width
+            width: width,
+            casing: casing
         )
         
         // Add to saved polylines
@@ -275,7 +301,8 @@ extension MapLibreWrapperModel {
             title: old.title,
             coordinates: coordinates,
             color: old.color,
-            width: old.width
+            width: old.width,
+            casing: old.casing
         )
         savedPolylines[index] = newPolyline
         
@@ -296,7 +323,12 @@ extension MapLibreWrapperModel {
         source.shape = mlnPolyline
     }
     
-    public func updatePolyline(id: String, color: UIColor, width: CGFloat) {
+    public func updatePolyline(
+        id: String,
+        color: UIColor,
+        width: CGFloat,
+        casing: UniversalMapPolylineCasing?
+    ) {
         guard let index = savedPolylines.firstIndex(where: { $0.id == id }) else { return }
         
         let old = savedPolylines[index]
@@ -305,7 +337,8 @@ extension MapLibreWrapperModel {
             title: old.title,
             coordinates: old.coordinates,
             color: color,
-            width: width
+            width: width,
+            casing: casing
         )
         savedPolylines[index] = newPolyline
         
@@ -316,6 +349,34 @@ extension MapLibreWrapperModel {
         
         layer.lineColor = NSExpression(forConstantValue: color)
         layer.lineWidth = NSExpression(forConstantValue: width)
+
+        let casingLayerId = "polyline-casing-layer-\(id)"
+        if let casing {
+            if let casingLayer = style.layer(
+                withIdentifier: casingLayerId
+            ) as? MLNLineStyleLayer {
+                casingLayer.lineColor = NSExpression(forConstantValue: casing.color)
+                casingLayer.lineWidth = NSExpression(
+                    forConstantValue: max(casing.width, width)
+                )
+            } else if let source = style.source(
+                withIdentifier: "polyline-source-\(id)"
+            ) {
+                let casingLayer = MLNLineStyleLayer(
+                    identifier: casingLayerId,
+                    source: source
+                )
+                casingLayer.lineColor = NSExpression(forConstantValue: casing.color)
+                casingLayer.lineWidth = NSExpression(
+                    forConstantValue: max(casing.width, width)
+                )
+                casingLayer.lineCap = NSExpression(forConstantValue: "round")
+                casingLayer.lineJoin = NSExpression(forConstantValue: "round")
+                style.insertLayer(casingLayer, below: layer)
+            }
+        } else if let casingLayer = style.layer(withIdentifier: casingLayerId) {
+            style.removeLayer(casingLayer)
+        }
     }
     
     /// Remove a polyline from the map
@@ -332,6 +393,12 @@ extension MapLibreWrapperModel {
         // Remove the layer and source from the map
         if let layer = style.layer(withIdentifier: "polyline-layer-\(polylineId)") {
             style.removeLayer(layer)
+        }
+
+        if let casingLayer = style.layer(
+            withIdentifier: "polyline-casing-layer-\(polylineId)"
+        ) {
+            style.removeLayer(casingLayer)
         }
         
         if let source = style.source(withIdentifier: "polyline-source-\(polylineId)") {
@@ -353,6 +420,12 @@ extension MapLibreWrapperModel {
         for polyline in savedPolylines {
             if let layer = style.layer(withIdentifier: "polyline-layer-\(polyline.id)") {
                 style.removeLayer(layer)
+            }
+
+            if let casingLayer = style.layer(
+                withIdentifier: "polyline-casing-layer-\(polyline.id)"
+            ) {
+                style.removeLayer(casingLayer)
             }
             
             if let source = style.source(withIdentifier: "polyline-source-\(polyline.id)") {

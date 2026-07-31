@@ -51,6 +51,7 @@ final class MapLibreMapViewController: UIViewController {
             zoomLevel: viewModel.zoomLevel,
             inset: inset,
             showsUserLocation: showsUserLocation,
+            isPitchEnabled: viewModel.isPitchEnabled,
             delegate: mapDelegate
         )
         self.mapView = mapView
