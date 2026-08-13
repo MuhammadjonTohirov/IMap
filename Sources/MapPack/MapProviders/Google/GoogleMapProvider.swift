@@ -157,6 +157,21 @@ public class GoogleMapsProvider: NSObject, MapProviderProtocol {
         self.showUserLocation(self.shouldShowUserLocation)
     }
 
+    public func setUserLocationAppearance(_ appearance: UserLocationAppearance) async throws {
+        switch appearance {
+        case .standard:
+            setUserLocationIcon(nil, scale: 1)
+        case let .image(image, scale):
+            setUserLocationIcon(image, scale: scale)
+        case .model3D:
+            let error = UserLocationAppearanceError.unsupportedThreeDimensionalModel(
+                providerName: "Google Maps"
+            )
+            Logging.error(tag: "GoogleMaps", error.localizedDescription)
+            throw error
+        }
+    }
+
     @MainActor
     public func setTintColor(_ color: UIColor) {
         viewModel.setTintColor(color)
@@ -289,7 +304,12 @@ public class GoogleMapsProvider: NSObject, MapProviderProtocol {
     
     public func addPolyline(_ polyline: UniversalMapPolyline, animated: Bool) {
         self.polylines[polyline.id] = polyline
-        self.viewModel.addPolyline(id: polyline.id, polyline: polyline.gmsPolyline(), animated: animated)
+        self.viewModel.addPolyline(
+            id: polyline.id,
+            polyline: polyline.gmsPolyline(),
+            casing: polyline.gmsCasingPolyline(),
+            animated: animated
+        )
     }
     
     public func updatePolyline(_ polyline: UniversalMapPolyline, animated: Bool) {

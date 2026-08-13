@@ -22,6 +22,7 @@ enum MapLibreNativeMapFactory {
         zoomLevel: Double,
         inset: MapEdgeInsets?,
         showsUserLocation: Bool,
+        isPitchEnabled: Bool,
         delegate: MLNMapViewDelegate
     ) -> MLNMapView {
         let styleURL = URL(string: styleUrl ?? fallbackStyleURL)
@@ -33,7 +34,7 @@ enum MapLibreNativeMapFactory {
         view.prefetchesTiles = false
         view.isMultipleTouchEnabled = false
         view.tileCacheEnabled = true
-        view.isPitchEnabled = false
+        view.isPitchEnabled = isPitchEnabled
         view.isHapticFeedbackEnabled = true
         view.delegate = delegate
         view.accessibilityLabel = "mapView"
@@ -86,6 +87,7 @@ public struct MLNMapViewWrapper: UIViewRepresentable {
             zoomLevel: viewModel.zoomLevel,
             inset: inset,
             showsUserLocation: showsUserLocation,
+            isPitchEnabled: viewModel.isPitchEnabled,
             delegate: delegate
         )
     }

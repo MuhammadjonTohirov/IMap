@@ -26,6 +26,9 @@ public struct MapPolyline: Identifiable {
     
     /// Width/thickness of the polyline
     public let width: CGFloat
+
+    /// Optional wider stroke rendered underneath the main line
+    public let casing: UniversalMapPolylineCasing?
     
     /// Initialize a new polyline
     /// - Parameters:
@@ -39,13 +42,15 @@ public struct MapPolyline: Identifiable {
         title: String? = nil,
         coordinates: [CLLocationCoordinate2D],
         color: UIColor = .blue,
-        width: CGFloat = 3.0
+        width: CGFloat = 3.0,
+        casing: UniversalMapPolylineCasing? = nil
     ) {
         self.id = id
         self.title = title
         self.coordinates = coordinates
         self.color = color
         self.width = width
+        self.casing = casing
     }
     
     /// Calculate the total distance of the polyline in meters

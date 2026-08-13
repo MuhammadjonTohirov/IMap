@@ -109,6 +109,12 @@ public protocol MapUserLocationDisplayable: AnyObject {
     func setUserTrackingMode(mode: UserLocationtrackingMode)
     
     func setUserLocationIcon(_ image: UIImage?, scale: CGFloat)
+
+    /// Change the current-location presentation.
+    ///
+    /// The asynchronous form lets providers prepare resources, such as a USDZ model,
+    /// without blocking the main thread.
+    func setUserLocationAppearance(_ appearance: UserLocationAppearance) async throws
     
     func updateUserLocation(_ location: CLLocation)
     
@@ -182,6 +188,12 @@ public struct MapCapabilities: OptionSet, Sendable {
     
     /// Supports polyline manipulation
     public static let polylines = MapCapabilities(rawValue: 1 << 3)
+
+    /// Supports a live, camera-aware 3D current-location model.
+    public static let threeDimensionalUserLocation = MapCapabilities(rawValue: 1 << 4)
+
+    /// Supports a dedicated full-screen turn-by-turn navigation controller.
+    public static let turnByTurnNavigation = MapCapabilities(rawValue: 1 << 5)
 }
 
 // MARK: - Main Protocol
@@ -239,6 +251,23 @@ public extension MapUserLocationDisplayable {
     func updateUserLocation(_ location: CLLocation) {}
 
     func showUserLocationAccuracy(_ show: Bool) {}
+}
+
+public extension MapUserLocationDisplayable where Self: MapProviderProtocol {
+    /// Source-compatible fallback for providers that only implement the existing image
+    /// customization API.
+    func setUserLocationAppearance(_ appearance: UserLocationAppearance) async throws {
+        switch appearance {
+        case .standard:
+            setUserLocationIcon(nil, scale: 1)
+        case let .image(image, scale):
+            setUserLocationIcon(image, scale: scale)
+        case .model3D:
+            throw UserLocationAppearanceError.unsupportedThreeDimensionalModel(
+                providerName: String(describing: type(of: self))
+            )
+        }
+    }
 }
 
 public extension MapUIKitViewable where Self: MapViewable {

@@ -483,6 +483,18 @@ public class UniversalMapViewModel: ObservableObject {
         mapProviderInstance.setUserLocationIcon(userLocationIcon, scale: scale)
         _ = applyUserTrackingMode(uiState.userTrackingMode, reason: .programmatic)
     }
+
+    /// Switches between the regular, image, and live 3D current-location indicators.
+    ///
+    /// Preparing a 3D model is asynchronous. Await this call before expecting the
+    /// marker to change. Google Maps reports
+    /// ``UserLocationAppearanceError/unsupportedThreeDimensionalModel(providerName:)``
+    /// for `.model3D`; its regular and image appearances remain supported.
+    @MainActor
+    public func set(userLocationAppearance: UserLocationAppearance) async throws {
+        try await mapProviderInstance.setUserLocationAppearance(userLocationAppearance)
+        _ = applyUserTrackingMode(uiState.userTrackingMode, reason: .programmatic)
+    }
     
     @MainActor
     public func showUserLocationAccuracy(_ show: Bool) {
@@ -563,6 +575,10 @@ public class UniversalMapViewModel: ObservableObject {
 
         if mode == .none {
             latestDeviceHeading = nil
+
+            if previousMode != .none, reason == .programmatic {
+                focusToCurrentLocation(animated: true)
+            }
         }
 
         if notifyDelegate, previousMode != mode {

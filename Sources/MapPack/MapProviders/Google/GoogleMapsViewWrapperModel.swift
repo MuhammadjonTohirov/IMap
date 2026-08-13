@@ -37,6 +37,7 @@ open class GoogleMapsViewWrapperModel: NSObject, ObservableObject {
     
     // Polylines currently on the map
     public private(set) var polylines: [String: GMSPolyline] = [:]
+    public private(set) var polylineCasings: [String: GMSPolyline] = [:]
 
     public private(set) var tintColor: UIColor?
     
@@ -369,7 +370,12 @@ public extension GoogleMapsViewWrapperModel {
     
     // MARK: - Polyline management
         
-    func addPolyline(id: String, polyline: GMSPolyline, animated: Bool = false) {
+    func addPolyline(
+        id: String,
+        polyline: GMSPolyline,
+        casing: GMSPolyline? = nil,
+        animated: Bool = false
+    ) {
         // Cancel existing animation
         activePolylineAnimations[id]?.cancel()
         activePolylineAnimations[id] = nil
@@ -378,6 +384,8 @@ public extension GoogleMapsViewWrapperModel {
         if let existing = self.polylines[id] {
             existing.map = nil
         }
+        polylineCasings[id]?.map = nil
+        polylineCasings[id] = casing
         
         self.polylines[id] = polyline
         
@@ -388,15 +396,28 @@ public extension GoogleMapsViewWrapperModel {
             emptyPath.add(fullPath.coordinate(at: 0))
             
             polyline.path = emptyPath
+            casing?.path = emptyPath
+            casing?.map = self.mapView
             polyline.map = self.mapView
-            
-            animatePolylineDrawing(id: id, polyline: polyline, fullPath: fullPath)
+
+            animatePolylineDrawing(
+                id: id,
+                polyline: polyline,
+                casing: casing,
+                fullPath: fullPath
+            )
         } else {
+            casing?.map = self.mapView
             polyline.map = self.mapView
         }
     }
     
-    private func animatePolylineDrawing(id: String, polyline: GMSPolyline, fullPath: GMSPath) {
+    private func animatePolylineDrawing(
+        id: String,
+        polyline: GMSPolyline,
+        casing: GMSPolyline?,
+        fullPath: GMSPath
+    ) {
         let count = fullPath.count()
         var currentIndex: UInt = 1
         // Animation config
@@ -427,6 +448,7 @@ public extension GoogleMapsViewWrapperModel {
             }
             
             polyline.path = currentPath
+            casing?.path = currentPath
             currentIndex = endIndex
             
             if currentIndex >= count {
@@ -456,51 +478,36 @@ public extension GoogleMapsViewWrapperModel {
                 emptyPath.add(coordinates[0])
             }
             polyline.path = emptyPath
-            animatePolylineDrawing(id: id, polyline: polyline, fullPath: path)
+            polylineCasings[id]?.path = emptyPath
+            animatePolylineDrawing(
+                id: id,
+                polyline: polyline,
+                casing: polylineCasings[id],
+                fullPath: path
+            )
         } else {
             polyline.path = path
+            polylineCasings[id]?.path = path
         }
     }
     
     func updatePolyline(id: String, with newPolyline: UniversalMapPolyline, animated: Bool = false) {
-        // If it doesn't exist, we can add it, or just return.
-        guard let polyline = self.polylines[id] else {
-            // Fallback to add
-            addPolyline(id: id, polyline: newPolyline.gmsPolyline(), animated: animated)
-            return
-        }
-        
-        activePolylineAnimations[id]?.cancel()
-        activePolylineAnimations[id] = nil
-        
-        let path = newPolyline.coordinates.gmsPath()
-
-        polyline.strokeColor = newPolyline.color
-        polyline.strokeWidth = newPolyline.width
-        polyline.geodesic = newPolyline.geodesic
-        
-        if animated {
-            let emptyPath = GMSMutablePath()
-            if newPolyline.coordinates.count > 0 {
-                emptyPath.add(newPolyline.coordinates[0])
-            }
-            polyline.path = emptyPath
-            animatePolylineDrawing(id: id, polyline: polyline, fullPath: path)
-        } else {
-            polyline.path = path
-        }
+        addPolyline(
+            id: id,
+            polyline: newPolyline.gmsPolyline(),
+            casing: newPolyline.gmsCasingPolyline(),
+            animated: animated
+        )
     }
     
     func removePolyline(id: String) {
         activePolylineAnimations[id]?.cancel()
         activePolylineAnimations[id] = nil
         
-        guard let polyline = self.polylines[id] else {
-            return
-        }
-        
-        polyline.map = nil
+        self.polylines[id]?.map = nil
         self.polylines[id] = nil
+        polylineCasings[id]?.map = nil
+        polylineCasings[id] = nil
     }
     
     func removeAllPolylines() {
@@ -510,7 +517,11 @@ public extension GoogleMapsViewWrapperModel {
         self.polylines.values.forEach {
             $0.map = nil
         }
+        polylineCasings.values.forEach {
+            $0.map = nil
+        }
         self.polylines.removeAll()
+        polylineCasings.removeAll()
     }
 }
 
@@ -556,6 +567,19 @@ extension UniversalMapPolyline {
         gmsPolyline.strokeColor = color
         gmsPolyline.strokeWidth = width
         gmsPolyline.geodesic = geodesic
+        return gmsPolyline
+    }
+
+    @MainActor
+    func gmsCasingPolyline() -> GMSPolyline? {
+        guard let casing else { return nil }
+
+        let gmsPolyline = GMSPolyline(path: coordinates.gmsPath())
+        gmsPolyline.accessibilityLabel = "\(id)-casing"
+        gmsPolyline.strokeColor = casing.color
+        gmsPolyline.strokeWidth = max(casing.width, width)
+        gmsPolyline.geodesic = geodesic
+        gmsPolyline.zIndex = -1
         return gmsPolyline
     }
 }

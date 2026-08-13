@@ -27,6 +27,8 @@ public struct UniversalMapPolyline: Identifiable {
     public var geodesic: Bool
     /// Optional title for the polyline
     public var title: String?
+    /// Optional wider stroke rendered underneath the main line
+    public var casing: UniversalMapPolylineCasing?
     
     public init(
         id: String = UUID().uuidString,
@@ -34,7 +36,8 @@ public struct UniversalMapPolyline: Identifiable {
         color: UIColor = .blue,
         width: CGFloat = 3.0,
         geodesic: Bool = true,
-        title: String? = nil
+        title: String? = nil,
+        casing: UniversalMapPolylineCasing? = nil
     ) {
         self.id = id
         self.coordinates = coordinates
@@ -42,12 +45,13 @@ public struct UniversalMapPolyline: Identifiable {
         self.width = width
         self.geodesic = geodesic
         self.title = title
+        self.casing = casing
     }
     
     /// Converts route coordinates to a polyline
     public static func fromRouteCoordinates(_ routeCoords: [RouteDataCoordinate]) -> UniversalMapPolyline {
         let coordinates = routeCoords.map { $0.coordinate }
-        return UniversalMapPolyline(coordinates: coordinates)
+        return .route(coordinates: coordinates)
     }
     
     /// Calculate the total distance of the polyline in meters
@@ -63,7 +67,8 @@ public struct UniversalMapPolyline: Identifiable {
             title: title,
             coordinates: coordinates,
             color: color,
-            width: width
+            width: width,
+            casing: casing
         )
     }
 }
