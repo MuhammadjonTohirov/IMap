@@ -12,12 +12,12 @@ import CoreLocation
 extension UniversalMapViewModel: MapInteractionDelegate {
     public func mapDidStartDragging() {
         cancelUserTrackingForInteraction()
-        self.addressInfo = nil
+        clearAddressInfoAfterViewUpdate()
         self.delegate?.mapDidStartDragging(map: self.mapProviderInstance)
     }
     
     public func mapDidStartMoving() {
-        self.addressInfo = nil
+        clearAddressInfoAfterViewUpdate()
         self.delegate?.mapDidStartMoving(map: self.mapProviderInstance)
     }
     
@@ -39,5 +39,13 @@ extension UniversalMapViewModel: MapInteractionDelegate {
     
     public func mapDidRotate(to coordinate: CLLocationCoordinate2D) {
         self.delegate?.mapDidRotate(map: self.mapProviderInstance, location: coordinate)
+    }
+
+    /// Map SDK delegates can synchronously report camera movement while SwiftUI is
+    /// updating a representable. Defer published state changes until that update ends.
+    private func clearAddressInfoAfterViewUpdate() {
+        Task { @MainActor [weak self] in
+            self?.addressInfo = nil
+        }
     }
 }
