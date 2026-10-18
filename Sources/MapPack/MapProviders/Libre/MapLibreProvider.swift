@@ -119,7 +119,7 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
                 withDuration: camera.animationDuration ?? 1, // Default smooth animation duration
                 animationTimingFunction: CAMediaTimingFunction(name: .linear)
             ) {
-                Logging.l(tag: "MapLibre", "Camera animation completed")
+//                Logging.l(tag: "MapLibre", "Camera animation completed")
             }
         } else {
             mapView.camera = targetCamera
