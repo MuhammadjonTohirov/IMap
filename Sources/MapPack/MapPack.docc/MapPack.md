@@ -48,6 +48,39 @@ Google Maps continues to support `.standard` and `.image`. Requesting `.model3D`
 throws ``UserLocationAppearanceError/unsupportedThreeDimensionalModel(providerName:)``
 without terminating the app.
 
+If MapLibre cannot load the requested current-location model, it restores
+``UserLocationAppearance/standard`` and rethrows the loading error so the app can
+record or present the failure.
+
+## Reusable 3D Markers
+
+MapLibre also supports coordinate-driven 3D markers independently of the SDK's
+current-location annotation:
+
+```swift
+var vehicle = UniversalMap3DMarker(
+    id: "navigation-vehicle",
+    coordinate: initialCoordinate,
+    heading: initialHeading,
+    scale: 0.9,
+    model: .carArrow
+)
+
+try await mapViewModel.addMarker(vehicle)
+
+vehicle.coordinate = nextCoordinate
+vehicle.heading = nextHeading
+vehicle.scale = 1.0
+try await mapViewModel.updateMarker(vehicle)
+
+mapViewModel.removeMarker(withId: vehicle.id)
+```
+
+Updates with the same ID and model mutate the existing annotation and 3D render
+view. The marker is recomposed for live map bearing and pitch changes. A different
+model configuration intentionally replaces that marker after loading the new model.
+Google Maps continues to report an unsupported-3D error for this API.
+
 ## MapLibre Pitch Gestures
 
 MapLibre keeps pitch gestures disabled by default for compatibility. Enable them
@@ -91,6 +124,7 @@ unless a ``UniversalMapPolylineCasing`` is supplied.
 - ``UniversalMapPolylineCasing``
 - ``UniversalMapCamera``
 - ``UniversalMarker``
+- ``UniversalMap3DMarker``
 - ``UserLocationAppearance``
 - ``UserLocation3DModel``
 - ``UserLocationAppearanceError``

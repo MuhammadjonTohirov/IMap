@@ -3,7 +3,7 @@ import RealityKit
 import UIKit
 
 @MainActor
-final class MapLibreUserLocation3DView: UIView {
+final class MapLibre3DMarkerView: UIView {
     private enum Layout {
         static let cameraDistance: Float = 3.2
         static let normalizedModelExtent: Float = 1.5
@@ -19,22 +19,30 @@ final class MapLibreUserLocation3DView: UIView {
     private let headingRoot = Entity()
     private let camera = PerspectiveCamera()
 
-    private var renderState = MapLibreUserLocation3DRenderState()
+    private(set) var renderState = MapLibreUserLocation3DRenderState()
     private var snapshotRevision: UInt?
     private var snapshotTask: Task<Void, Never>?
     private var entity: Entity?
+    private var normalizedScale: Float?
+    private(set) var relativeScale: Float
     private var isViewHierarchyConfigured = false
     private var isSceneConfigured = false
 
-    init(model prototype: Entity, configuration: UserLocation3DModel) {
+    init(
+        model prototype: Entity,
+        configuration: UserLocation3DModel,
+        accessibilityLabel: String
+    ) {
         self.configuration = configuration
         self.entity = prototype
+        self.relativeScale = max(configuration.relativeScale, 0.01)
         self.realityView = ARView(
             frame: CGRect(origin: .zero, size: configuration.viewportSize),
             cameraMode: .nonAR,
             automaticallyConfigureSession: false
         )
         super.init(frame: CGRect(origin: .zero, size: configuration.viewportSize))
+        self.accessibilityLabel = accessibilityLabel
     }
 
     required init?(coder: NSCoder) {
@@ -84,6 +92,27 @@ final class MapLibreUserLocation3DView: UIView {
         scheduleSnapshot()
     }
 
+    func updateMarkerTransform(
+        worldHeading: CLLocationDirection,
+        mapBearing: CLLocationDirection,
+        mapPitch: CGFloat
+    ) {
+        let displayHeading = MapLibreUserLocationIconRotation.normalizedHeading(
+            worldHeading - mapBearing
+        )
+        setDisplayHeading(displayHeading)
+        setMapPitch(mapPitch)
+    }
+
+    func setRelativeScale(_ requestedScale: Float) {
+        let clampedScale = max(requestedScale, 0.01)
+        guard abs(relativeScale - clampedScale) > 0.0001 else { return }
+        relativeScale = clampedScale
+        applyScale()
+        renderState.invalidate()
+        scheduleSnapshot()
+    }
+
     func setMapPitch(_ degrees: CGFloat) {
         guard renderState.setMapPitch(degrees) else { return }
         updateSceneTransforms()
@@ -98,7 +127,9 @@ final class MapLibreUserLocation3DView: UIView {
         clipsToBounds = false
         isUserInteractionEnabled = false
         isAccessibilityElement = true
-        accessibilityLabel = "Current location and direction"
+        if accessibilityLabel?.isEmpty != false {
+            accessibilityLabel = "3D map marker"
+        }
 
         shadowView.backgroundColor = UIColor.black.withAlphaComponent(0.16)
         shadowView.layer.cornerRadius = Layout.shadowSize.height / 2
@@ -141,9 +172,8 @@ final class MapLibreUserLocation3DView: UIView {
 
         let horizontalExtent = max(bounds.extents.x, bounds.extents.z)
         if horizontalExtent > .ulpOfOne {
-            let requestedScale = max(configuration.relativeScale, 0.01)
-            let scale = Layout.normalizedModelExtent * requestedScale / horizontalExtent
-            headingRoot.scale = SIMD3<Float>(repeating: scale)
+            normalizedScale = Layout.normalizedModelExtent / horizontalExtent
+            applyScale()
             headingRoot.position.y = 0.3
         }
 
@@ -192,6 +222,11 @@ final class MapLibreUserLocation3DView: UIView {
             upVector: SIMD3<Float>(0, 0, -1),
             relativeTo: sceneAnchor
         )
+    }
+
+    private func applyScale() {
+        guard let normalizedScale else { return }
+        headingRoot.scale = SIMD3<Float>(repeating: normalizedScale * relativeScale)
     }
 
     private func scheduleSnapshot() {

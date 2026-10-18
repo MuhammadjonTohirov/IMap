@@ -13,7 +13,7 @@ import RealityKit
 final class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
     private let circleView = UIView()
     private var iconView: UIImageView?
-    private var modelView: MapLibreUserLocation3DView?
+    private var modelView: MapLibre3DMarkerView?
     
     private var lastAccuracy: CLLocationAccuracy = 0
     private var lastLatitude: CLLocationDegrees = 0
@@ -70,9 +70,10 @@ final class UniversalUserLocationAnnotationView: MLNUserLocationAnnotationView {
         iconView = nil
         modelView?.removeFromSuperview()
 
-        let newModelView = MapLibreUserLocation3DView(
+        let newModelView = MapLibre3DMarkerView(
             model: model,
-            configuration: configuration
+            configuration: configuration,
+            accessibilityLabel: "Current location and direction"
         )
         newModelView.frame = CGRect(origin: .zero, size: configuration.viewportSize)
         addSubview(newModelView)

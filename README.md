@@ -30,6 +30,7 @@ IMap abstracts the differences between Google Maps SDK and MapLibre, providing a
 - ✅ **Unified API**: Single interface for all map operations
 - ✅ **NavigationTrackingCore**: Reusable tracking engine for snapped marker and route-progress updates
 - ✅ **Markers**: Add, update, and remove custom markers with views
+- ✅ **Reusable 3D Markers**: Add, update, and remove MapLibre models by stable marker ID
 - ✅ **Polylines**: Draw and animate routes with customizable styling
 - ✅ **Camera Control**: Programmatic camera positioning and animations
 - ✅ **User Location**: Built-in user location tracking with custom icons
@@ -180,6 +181,36 @@ let marker = UniversalMarker(
 
 viewModel.addMarker(marker)
 ```
+
+#### Reusable MapLibre 3D marker
+
+Create the marker once when navigation starts, then send updated values with the
+same ID. Coordinate, heading, and scale updates reuse the loaded model and render
+view; changing the model configuration replaces only that marker.
+
+```swift
+var vehicle = UniversalMap3DMarker(
+    id: "navigation-vehicle",
+    coordinate: initialCoordinate,
+    heading: initialHeading,
+    scale: 0.9,
+    model: .carArrow
+)
+
+try await viewModel.addMarker(vehicle)
+
+vehicle.coordinate = nextCoordinate
+vehicle.heading = nextHeading
+vehicle.scale = 1.0
+try await viewModel.updateMarker(vehicle)
+
+viewModel.removeMarker(withId: vehicle.id)
+```
+
+Reusable 3D markers are currently supported by MapLibre. Google Maps continues
+to report an unsupported-3D error. If loading the 3D current-location appearance
+fails in MapLibre, IMap restores the provider's regular current-location appearance
+and rethrows the loading error for diagnostics.
 
 ### 3. Drawing Routes
 

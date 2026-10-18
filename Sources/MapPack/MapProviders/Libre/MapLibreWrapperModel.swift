@@ -455,9 +455,18 @@ extension MapLibreWrapperModel {
         if bearingChanged {
             lastMarkerViewBearing = bearing
 
-            for marker in markers.values where marker.compensatesForMapBearing {
+            for marker in markers.values
+            where marker.compensatesForMapBearing
+                && !(marker.view is MapLibre3DMarkerView) {
                 applyMarkerViewRotation(marker)
             }
+        }
+
+        // A 3D marker also changes perspective when only pitch changes, so refresh
+        // its camera-aware transform for every live camera update. The render view
+        // internally skips unchanged values.
+        for marker in markers.values where marker.view is MapLibre3DMarkerView {
+            applyMarkerViewRotation(marker)
         }
 
         // Pitch changes without a bearing change during a tilt gesture, so the
@@ -523,6 +532,15 @@ extension MapLibreWrapperModel {
     }
     
     func applyMarkerViewRotation(_ marker: UniversalMarker) {
+        if let markerView = marker.view as? MapLibre3DMarkerView {
+            markerView.updateMarkerTransform(
+                worldHeading: marker.worldHeading,
+                mapBearing: currentMapBearing,
+                mapPitch: mapView?.camera.pitch ?? 0
+            )
+            return
+        }
+
         let angle = markerViewRotationAngle(for: marker)
         if let last = marker.lastAppliedViewRotation, abs(angle - last) <= 0.0001 {
             return

@@ -308,6 +308,14 @@ public class UniversalMapViewModel: ObservableObject {
         mapProviderInstance.addMarker(marker)
         return marker.id
     }
+
+    /// Load and add a reusable 3D marker.
+    @discardableResult
+    public func addMarker(_ marker: UniversalMap3DMarker) async throws -> String {
+        try await mapProviderInstance.addThreeDimensionalMarker(marker)
+        markersById[marker.id] = marker
+        return marker.id
+    }
     
     public func marker(byId id: String) -> (any UniversalMapMarkerProtocol)? {
         return markersById[id]
@@ -322,6 +330,16 @@ public class UniversalMapViewModel: ObservableObject {
         } else {
             mapProviderInstance.addMarker(marker)
         }
+    }
+
+    /// Update a reusable 3D marker in place when its model is unchanged.
+    public func updateMarker(_ marker: UniversalMap3DMarker) async throws {
+        if markersById[marker.id] == nil {
+            try await mapProviderInstance.addThreeDimensionalMarker(marker)
+        } else {
+            try await mapProviderInstance.updateThreeDimensionalMarker(marker)
+        }
+        markersById[marker.id] = marker
     }
     
     /// Remove a marker from the map

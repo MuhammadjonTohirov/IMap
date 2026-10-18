@@ -49,6 +49,8 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     private var showsUserLocation: Bool = true
     private var requestedUserTrackingMode: UserLocationtrackingMode = .none
     private var userLocationAppearanceRequestID = UUID()
+    private var threeDimensionalMarkers: [String: UniversalMap3DMarker] = [:]
+    private var threeDimensionalMarkerRequestIDs: [String: UUID] = [:]
     public var userTrackingMode: MLNUserTrackingMode? {
         requestedUserTrackingMode.maplibre
     }
@@ -82,6 +84,7 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
             .styling,
             .polylines,
             .threeDimensionalUserLocation,
+            .threeDimensionalMarkers,
             .turnByTurnNavigation
         ]
     }
@@ -119,7 +122,7 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
                 withDuration: camera.animationDuration ?? 1, // Default smooth animation duration
                 animationTimingFunction: CAMediaTimingFunction(name: .linear)
             ) {
-                Logging.l(tag: "MapLibre", "Camera animation completed")
+//                Logging.l(tag: "MapLibre", "Camera animation completed")
             }
         } else {
             mapView.camera = targetCamera
@@ -160,12 +163,26 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
         case .standard, .image:
             applyUserLocationAppearance(appearance, modelEntity: nil)
         case let .model3D(model):
-            let entity = try await userLocation3DModelLoader.loadModel(model)
-            try Task.checkCancellation()
-            guard userLocationAppearanceRequestID == requestID else {
+            do {
+                let entity = try await userLocation3DModelLoader.loadModel(model)
+                try Task.checkCancellation()
+                guard userLocationAppearanceRequestID == requestID else {
+                    throw CancellationError()
+                }
+                applyUserLocationAppearance(appearance, modelEntity: entity)
+            } catch is CancellationError {
                 throw CancellationError()
+            } catch {
+                guard userLocationAppearanceRequestID == requestID else {
+                    throw CancellationError()
+                }
+                applyUserLocationAppearance(.standard, modelEntity: nil)
+                Logging.error(
+                    tag: "MapLibre",
+                    "Falling back to the regular current-location appearance: \(error.localizedDescription)"
+                )
+                throw error
             }
-            applyUserLocationAppearance(appearance, modelEntity: entity)
         }
     }
 
@@ -218,7 +235,80 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     }
     
     public func addMarker(_ marker: any UniversalMapMarkerProtocol) {
+        threeDimensionalMarkers.removeValue(forKey: marker.id)
+        threeDimensionalMarkerRequestIDs.removeValue(forKey: marker.id)
         viewModel.addMarker(marker)
+    }
+
+    public func addThreeDimensionalMarker(
+        _ marker: UniversalMap3DMarker
+    ) async throws {
+        if threeDimensionalMarkers[marker.id] != nil {
+            try await updateThreeDimensionalMarker(marker)
+            return
+        }
+
+        let requestID = UUID()
+        threeDimensionalMarkerRequestIDs[marker.id] = requestID
+
+        let entity: Entity
+        do {
+            entity = try await userLocation3DModelLoader.loadModel(marker.model)
+            try Task.checkCancellation()
+            guard threeDimensionalMarkerRequestIDs[marker.id] == requestID else {
+                throw CancellationError()
+            }
+        } catch {
+            if threeDimensionalMarkerRequestIDs[marker.id] == requestID {
+                threeDimensionalMarkerRequestIDs.removeValue(forKey: marker.id)
+            }
+            throw error
+        }
+
+        let markerView = MapLibre3DMarkerView(
+            model: entity,
+            configuration: marker.model,
+            accessibilityLabel: marker.id
+        )
+        markerView.setRelativeScale(marker.scale)
+
+        let renderedMarker = UniversalMarker(
+            id: marker.id,
+            coordinate: marker.coordinate,
+            view: markerView,
+            reuseIdentifier: "three-dimensional-marker-\(marker.id)"
+        )
+        renderedMarker.set(compensatesForMapBearing: true)
+        renderedMarker.set(heading: marker.heading)
+
+        threeDimensionalMarkers[marker.id] = marker
+        threeDimensionalMarkerRequestIDs.removeValue(forKey: marker.id)
+        viewModel.addMarker(renderedMarker)
+    }
+
+    public func updateThreeDimensionalMarker(
+        _ marker: UniversalMap3DMarker
+    ) async throws {
+        guard let existing = threeDimensionalMarkers[marker.id] else {
+            try await addThreeDimensionalMarker(marker)
+            return
+        }
+
+        guard existing.model == marker.model,
+              let renderedMarker = viewModel.markers[marker.id],
+              let markerView = renderedMarker.view as? MapLibre3DMarkerView else {
+            removeMarker(withId: marker.id)
+            try await addThreeDimensionalMarker(marker)
+            return
+        }
+
+        markerView.setRelativeScale(marker.scale)
+        renderedMarker.updatePosition(
+            coordinate: marker.coordinate,
+            heading: marker.heading
+        )
+        threeDimensionalMarkers[marker.id] = marker
+        viewModel.updateMarker(renderedMarker)
     }
     
     public func marker(byId id: String) -> (any UniversalMapMarkerProtocol)? {
@@ -230,12 +320,16 @@ public class MapLibreProvider: NSObject, MapProviderProtocol {
     }
     
     public func removeMarker(withId id: String) {
+        threeDimensionalMarkers.removeValue(forKey: id)
+        threeDimensionalMarkerRequestIDs.removeValue(forKey: id)
         if markers[id] != nil {
             viewModel.removeMarker(withId: id)
         }
     }
     
     public func clearAllMarkers() {
+        threeDimensionalMarkers.removeAll()
+        threeDimensionalMarkerRequestIDs.removeAll()
         viewModel.clearAllMarkers()
     }
     

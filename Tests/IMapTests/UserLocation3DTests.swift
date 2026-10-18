@@ -1,3 +1,4 @@
+import CoreLocation
 import RealityKit
 import XCTest
 @testable import MapPack
@@ -75,6 +76,91 @@ final class UserLocation3DTests: XCTestCase {
         XCTAssertTrue(
             provider.capabilities.contains(.threeDimensionalUserLocation)
         )
+        XCTAssertTrue(
+            provider.capabilities.contains(.threeDimensionalMarkers)
+        )
+    }
+
+    @MainActor
+    func testReusableThreeDimensionalMarkerUpdatesWithoutRecreatingRenderState() async throws {
+        let loader = UserLocation3DModelLoaderStub()
+        let provider = MapLibreProvider(userLocation3DModelLoader: loader)
+        let marker = UniversalMap3DMarker(
+            id: "navigation-vehicle",
+            coordinate: CLLocationCoordinate2D(latitude: 41.3111, longitude: 69.2797),
+            heading: 35,
+            scale: 0.9,
+            model: .carArrow
+        )
+
+        try await provider.addThreeDimensionalMarker(marker)
+
+        let originalRenderedMarker = try XCTUnwrap(
+            provider.viewModel.markers[marker.id]
+        )
+        let originalView = try XCTUnwrap(
+            originalRenderedMarker.view as? MapLibre3DMarkerView
+        )
+
+        var updatedMarker = marker
+        updatedMarker.coordinate = CLLocationCoordinate2D(
+            latitude: 41.3122,
+            longitude: 69.2808
+        )
+        updatedMarker.heading = 125
+        updatedMarker.scale = 1.15
+        try await provider.updateThreeDimensionalMarker(updatedMarker)
+
+        let updatedRenderedMarker = try XCTUnwrap(
+            provider.viewModel.markers[marker.id]
+        )
+        XCTAssertTrue(updatedRenderedMarker === originalRenderedMarker)
+        XCTAssertTrue(updatedRenderedMarker.view === originalView)
+        XCTAssertEqual(loader.loadedModels, [.carArrow])
+        XCTAssertEqual(updatedRenderedMarker.coordinate.latitude, 41.3122, accuracy: 0.0001)
+        XCTAssertEqual(updatedRenderedMarker.coordinate.longitude, 69.2808, accuracy: 0.0001)
+        XCTAssertEqual(updatedRenderedMarker.worldHeading, 125)
+        XCTAssertEqual(originalView.relativeScale, 1.15, accuracy: 0.0001)
+
+        originalView.updateMarkerTransform(
+            worldHeading: 125,
+            mapBearing: 25,
+            mapPitch: 40
+        )
+        XCTAssertEqual(originalView.renderState.displayHeading, 100, accuracy: 0.0001)
+        XCTAssertEqual(originalView.renderState.mapPitch, 40, accuracy: 0.0001)
+
+        provider.removeMarker(withId: marker.id)
+
+        XCTAssertNil(provider.viewModel.markers[marker.id])
+    }
+
+    @MainActor
+    func testRemovingThreeDimensionalMarkerSupersedesPendingLoad() async throws {
+        let loader = YieldingUserLocation3DModelLoaderStub()
+        let provider = MapLibreProvider(userLocation3DModelLoader: loader)
+        let marker = UniversalMap3DMarker(
+            id: "pending-navigation-vehicle",
+            coordinate: CLLocationCoordinate2D(latitude: 41.3111, longitude: 69.2797),
+            heading: 35
+        )
+        let addRequest = Task { @MainActor in
+            try await provider.addThreeDimensionalMarker(marker)
+        }
+
+        while !loader.didStartLoading {
+            await Task.yield()
+        }
+        provider.removeMarker(withId: marker.id)
+
+        do {
+            try await addRequest.value
+            XCTFail("A removed marker must not appear after its pending model load finishes.")
+        } catch is CancellationError {
+            // Expected: removal invalidated the marker's pending request.
+        }
+
+        XCTAssertNil(provider.viewModel.markers[marker.id])
     }
 
     @MainActor
@@ -129,6 +215,28 @@ final class UserLocation3DTests: XCTestCase {
     }
 
     @MainActor
+    func testThreeDimensionalLocationFailureRestoresRegularAppearance() async throws {
+        let provider = MapLibreProvider(
+            userLocation3DModelLoader: FailingUserLocation3DModelLoaderStub()
+        )
+
+        do {
+            try await provider.setUserLocationAppearance(.model3D(.carArrow))
+            XCTFail("A model-loading failure should still be reported to the caller.")
+        } catch UserLocation3DModelLoaderStubError.loadingFailed {
+            // Expected. The provider also installs the regular appearance below.
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertFalse(provider.hasCustomUserLocationIcon)
+        XCTAssertNil(provider.viewModel.userLocation3DModelEntity)
+        guard case .standard = provider.viewModel.userLocationAppearance else {
+            return XCTFail("Expected the regular MapLibre location appearance.")
+        }
+    }
+
+    @MainActor
     func testBundledCarArrowLoadsWithGeometry() async throws {
         let loader = BundledUserLocation3DModelLoader()
 
@@ -178,5 +286,16 @@ private final class YieldingUserLocation3DModelLoaderStub: UserLocation3DModelLo
         didStartLoading = true
         await Task.yield()
         return Entity()
+    }
+}
+
+private enum UserLocation3DModelLoaderStubError: Error {
+    case loadingFailed
+}
+
+@MainActor
+private final class FailingUserLocation3DModelLoaderStub: UserLocation3DModelLoading {
+    func loadModel(_ model: UserLocation3DModel) async throws -> Entity {
+        throw UserLocation3DModelLoaderStubError.loadingFailed
     }
 }

@@ -54,11 +54,17 @@ public protocol MapMarkerManageable: AnyObject {
     
     /// Add a marker to the map
     func addMarker(_ marker: any UniversalMapMarkerProtocol)
+
+    /// Load and add a reusable 3D marker to the map.
+    func addThreeDimensionalMarker(_ marker: UniversalMap3DMarker) async throws
     
     func marker(byId id: String) -> (any UniversalMapMarkerProtocol)?
     
     /// Update a marker on the map
     func updateMarker(_ marker: any UniversalMapMarkerProtocol)
+
+    /// Update a reusable 3D marker without recreating it when its model is unchanged.
+    func updateThreeDimensionalMarker(_ marker: UniversalMap3DMarker) async throws
     
     /// Remove a marker from the map
     func removeMarker(withId id: String)
@@ -194,6 +200,9 @@ public struct MapCapabilities: OptionSet, Sendable {
 
     /// Supports a dedicated full-screen turn-by-turn navigation controller.
     public static let turnByTurnNavigation = MapCapabilities(rawValue: 1 << 5)
+
+    /// Supports reusable, coordinate-driven 3D map markers.
+    public static let threeDimensionalMarkers = MapCapabilities(rawValue: 1 << 6)
 }
 
 // MARK: - Main Protocol
@@ -238,6 +247,20 @@ public extension MapProviderProtocol {
 
     func focusOnPolyline(id: String) {
         focusOnPolyline(id: id, animated: true)
+    }
+}
+
+public extension MapMarkerManageable where Self: MapProviderProtocol {
+    func addThreeDimensionalMarker(_ marker: UniversalMap3DMarker) async throws {
+        throw UserLocationAppearanceError.unsupportedThreeDimensionalMarker(
+            providerName: String(describing: type(of: self))
+        )
+    }
+
+    func updateThreeDimensionalMarker(_ marker: UniversalMap3DMarker) async throws {
+        throw UserLocationAppearanceError.unsupportedThreeDimensionalMarker(
+            providerName: String(describing: type(of: self))
+        )
     }
 }
 

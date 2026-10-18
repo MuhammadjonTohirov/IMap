@@ -5,6 +5,9 @@ public enum UserLocationAppearanceError: Error, Equatable {
     /// The selected provider cannot render a live 3D current-location model.
     case unsupportedThreeDimensionalModel(providerName: String)
 
+    /// The selected provider cannot render reusable 3D map markers.
+    case unsupportedThreeDimensionalMarker(providerName: String)
+
     /// The requested model is not present in the `MapPack` resource bundle.
     case missingModelResource(name: String)
 
@@ -17,6 +20,8 @@ extension UserLocationAppearanceError: LocalizedError {
         switch self {
         case let .unsupportedThreeDimensionalModel(providerName):
             return "\(providerName) does not support 3D current-location models."
+        case let .unsupportedThreeDimensionalMarker(providerName):
+            return "\(providerName) does not support 3D map markers."
         case let .missingModelResource(name):
             return "The bundled 3D current-location model '\(name)' is missing."
         case let .modelLoadingFailed(name, reason):
